@@ -7,6 +7,7 @@ const {
   submitRecord,
   getStaffRecords,
   uploadRecord,
+  createPrescription,
   getPatientRecords,
   getPendingRecords,
   approveRecord,
