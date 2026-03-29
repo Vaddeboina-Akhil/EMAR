@@ -10,7 +10,7 @@ const Doctor = require('./src/models/Doctor');
 // MongoDB connection
 const connectDB = async () => {
   try {
-    const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/emar';
+    const mongoURI = process.env.MONGO_URI || 'mongodb://localhost:27017/emar';
     await mongoose.connect(mongoURI, {
       useNewUrlParser: true,
       useUnifiedTopology: true
