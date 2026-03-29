@@ -122,7 +122,7 @@ const Login = () => {
           <img
             src={displayRole === 'patient' ? '/images/logo-green.png' : '/images/logo-blue.png'}
             alt="EMAR"
-            style={{ height: '48px', objectFit: 'contain' }}
+            style={{ height: '25px', objectFit: 'contain' }}
           />
         </div>
 
@@ -137,7 +137,7 @@ const Login = () => {
         {/* Illustration — animates with role switch */}
         <div style={{
           position: 'absolute', zIndex: 2,
-          bottom: '60px', left: '40px', width: '320px',
+          bottom: '150px', left: '120px', width: '320px',
           ...getAnimStyle()
         }}>
           <img
