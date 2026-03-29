@@ -40,6 +40,15 @@ const staffAccounts = [
     phone: '9876543004',
     password: 'Staff@123',
     role: 'staff'
+  },
+  {
+    name: 'Neha Singh',
+    staffId: 'ST-005',
+    hospitalName: 'Rainbow Hospital',
+    email: 'neha.singh@rainbowhospital.com',
+    phone: '9876543005',
+    password: 'Staff@123',
+    role: 'staff'
   }
 ];
 
