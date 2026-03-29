@@ -325,16 +325,16 @@
     "verified": true
   },
   {
-    "name": "Dr. Rainbow Admin",
-    "dob": "1970-01-01",
-    "age": 54,
-    "licenseId": "MED999",
-    "specialization": "General Surgery",
+    "name": "AVK. ABHIRAMA PRANEETH",
+    "dob": "2005-11-23",
+    "age": 20,
+    "licenseId": "MED1235",
+    "specialization": "Gynecologist",
     "hospitalName": "Rainbow Hospital",
-    "email": "doctor@rainbowhospital.com",
-    "phone": "9999999999",
-    "password": "$2a$10$Gs9hI8jJ1kK4lL7mM2nO.SecurePass999!",
-    "doctorId": "DOC999",
-    "verified": true
+    "email": "abhiramapraneeth@gmail.com",
+    "phone": "9550463198",
+    "password": "$2a$10$rKKcNCZSyxOkMCSZmxQgXevZBrpi97TGVtn.bHDUVbyOo54xbVc5K",
+    "doctorId": "EMAR-D-2887",
+    "verified": false
   }
 ]
