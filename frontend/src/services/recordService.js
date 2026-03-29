@@ -47,6 +47,5 @@ export const recordService = {
   // Doctor's own records
   getDoctorRecords: (doctorId) => api.get(`/records/doctor/${doctorId}`)
 };
-};
 
 export default recordService;
