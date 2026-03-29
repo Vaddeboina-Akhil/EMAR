@@ -68,9 +68,47 @@ const getStaffRecords = async (req, res) => {
 
 const uploadRecord = async (req, res) => {
   try {
-    const record = await MedicalRecord.create(req.body);
-    res.status(201).json(record);
+    const {
+      patientId, patientName, recordType, diagnosis,
+      medicines, notes, hospitalName, staffId, staffName
+    } = req.body;
+
+    let fileData = null;
+    let fileName = null;
+    let fileSize = null;
+    
+    // If file is uploaded, convert to base64
+    if (req.file) {
+      fileData = req.file.buffer.toString('base64');
+      fileName = req.file.originalname;
+      fileSize = req.file.size;
+      console.log(`📄 PDF received: ${fileName} (${fileSize} bytes)`);
+    }
+
+    const record = await MedicalRecord.create({
+      patientId,
+      patientName,
+      recordType,
+      diagnosis,
+      medicines: medicines || '',
+      notes: notes || '',
+      hospitalName,
+      staffId,
+      staffName,
+      status: 'draft',
+      uploadedBy: staffId,
+      uploaderRole: 'staff',
+      fileUrl: fileData ? `data:application/pdf;base64,${fileData}` : null,
+      fileName,
+      fileSize
+    });
+
+    res.status(201).json({
+      message: '✅ Record created successfully',
+      record
+    });
   } catch (err) {
+    console.error('Upload error:', err);
     res.status(500).json({ message: err.message });
   }
 };

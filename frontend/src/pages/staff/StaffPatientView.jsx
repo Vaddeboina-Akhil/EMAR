@@ -22,6 +22,7 @@ const StaffPatientView = () => {
     diagnosis: '',
     medicines: '',
     notes: '',
+    pdfFile: null
   });
 
   useEffect(() => {
@@ -70,29 +71,43 @@ const StaffPatientView = () => {
       return;
     }
 
+    if (!formData.pdfFile) {
+      alert('⚠️ Please upload a PDF file');
+      return;
+    }
+
+    if (formData.pdfFile.size > 10 * 1024 * 1024) {
+      alert('⚠️ PDF file must be less than 10 MB');
+      return;
+    }
+
     setUploading(true);
     try {
       const staffId = staff?._id || staff?.id;
-      const recordData = {
-        patientId: patient._id || patient.patientId,
-        patientName: patient.name,
-        recordType: formData.recordType,
-        diagnosis: formData.diagnosis,
-        medicines: formData.medicines || '',
-        notes: formData.notes || '',
-        staffId,
-        staffName: staff?.name || 'Unknown',
-        hospitalName: staff?.hospitalName || 'General Hospital'
-      };
-
-      const result = await recordService.createDraft(recordData);
       
-      alert('✅ Record saved as draft!');
+      // Create FormData for file upload
+      const formDataObj = new FormData();
+      formDataObj.append('patientId', patient._id || patient.patientId);
+      formDataObj.append('patientName', patient.name);
+      formDataObj.append('recordType', formData.recordType);
+      formDataObj.append('diagnosis', formData.diagnosis);
+      formDataObj.append('medicines', formData.medicines || '');
+      formDataObj.append('notes', formData.notes || '');
+      formDataObj.append('staffId', staffId);
+      formDataObj.append('staffName', staff?.name || 'Unknown');
+      formDataObj.append('hospitalName', staff?.hospitalName || 'General Hospital');
+      formDataObj.append('pdfFile', formData.pdfFile);
+
+      console.log('📤 Uploading record with PDF...');
+      const result = await api.post('/records/upload', formDataObj);
+      
+      alert('✅ Record uploaded successfully!');
       setFormData({
         recordType: 'Prescription',
         diagnosis: '',
         medicines: '',
         notes: '',
+        pdfFile: null
       });
       setShowUploadForm(false);
       
@@ -449,6 +464,69 @@ const StaffPatientView = () => {
                   onFocus={(e) => e.target.style.borderColor = '#DC143C'}
                   onBlur={(e) => e.target.style.borderColor = '#E0E0E0'}
                 />
+              </div>
+
+              {/* PDF File Upload */}
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '13px', color: '#333' }}>
+                  📄 Upload Scanned Copy (PDF) *
+                </label>
+                <div style={{
+                  border: '2px dashed #DC143C',
+                  borderRadius: '8px',
+                  padding: '20px',
+                  textAlign: 'center',
+                  backgroundColor: '#FFF5F5',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#FFEBEE';
+                    e.currentTarget.style.borderColor = '#B71C1C';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#FFF5F5';
+                    e.currentTarget.style.borderColor = '#DC143C';
+                  }}
+                >
+                  <input
+                    type="file"
+                    accept=".pdf"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file && file.type === 'application/pdf') {
+                        setFormData({ ...formData, pdfFile: file });
+                      } else {
+                        alert('⚠️ Please select a PDF file');
+                      }
+                    }}
+                    style={{ display: 'none' }}
+                    id="pdf-upload"
+                  />
+                  <label htmlFor="pdf-upload" style={{ cursor: 'pointer', display: 'block' }}>
+                    {formData.pdfFile ? (
+                      <>
+                        <div style={{ fontSize: '20px', marginBottom: '8px' }}>✅</div>
+                        <div style={{ fontSize: '14px', fontWeight: '600', color: '#2E7D32' }}>
+                          {formData.pdfFile.name}
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                          {(formData.pdfFile.size / 1024 / 1024).toFixed(2)} MB
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div style={{ fontSize: '24px', marginBottom: '8px' }}>📁</div>
+                        <div style={{ fontSize: '14px', fontWeight: '600', color: '#DC143C', marginBottom: '4px' }}>
+                          Click to select PDF or drag & drop
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#666' }}>
+                          Max 10 MB • PDF format only
+                        </div>
+                      </>
+                    )}
+                  </label>
+                </div>
               </div>
 
               {/* Buttons */}

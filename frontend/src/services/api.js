@@ -19,12 +19,19 @@ export const api = {
     return headers;
   },
   post: async (endpoint, data) => {
-    console.log(`🌐 POST ${endpoint}`, data);
+    console.log(`🌐 POST ${endpoint}`, data instanceof FormData ? '[FormData]' : data);
     try {
+      const isFormData = data instanceof FormData;
+      const headers = {};
+      const token = localStorage.getItem('emar_token');
+      if (token) headers.Authorization = `Bearer ${token}`;
+      // Don't set Content-Type for FormData - let browser set it with boundary
+      if (!isFormData) headers['Content-Type'] = 'application/json';
+      
       const res = await fetch(`${BASE_URL}${endpoint}`, {
         method: 'POST',
-        headers: api.buildHeaders(true),
-        body: JSON.stringify(data)
+        headers,
+        body: isFormData ? data : JSON.stringify(data)
       });
       console.log(`📊 Response status: ${res.status} ${res.statusText}`);
       const payload = await parseJsonResponse(res);
