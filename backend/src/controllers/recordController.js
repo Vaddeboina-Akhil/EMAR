@@ -26,7 +26,6 @@ const getPatientRecords = async (req, res) => {
 const getPendingRecords = async (req, res) => {
   try {
     const { doctorId } = req.params;
-    // Find doctor to get hospitalName
     const doctor = await Doctor.findById(doctorId);
     if (!doctor) return res.status(404).json({ message: 'Doctor not found' });
 
@@ -43,7 +42,7 @@ const getPendingRecords = async (req, res) => {
 
 const approveRecord = async (req, res) => {
   try {
-    const { status } = req.body; // 'approved' or 'rejected'
+    const { status } = req.body;
     const record = await MedicalRecord.findByIdAndUpdate(
       req.params.id,
       { status: status || 'approved' },
@@ -56,4 +55,16 @@ const approveRecord = async (req, res) => {
   }
 };
 
-module.exports = { uploadRecord, getPatientRecords, getPendingRecords, approveRecord };
+// ✅ NEW — Get all records added by this doctor
+const getRecordsByDoctor = async (req, res) => {
+  try {
+    const { doctorId } = req.params;
+    const records = await MedicalRecord.find({ doctorId })
+      .sort({ createdAt: -1 });
+    res.json(records);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+module.exports = { uploadRecord, getPatientRecords, getPendingRecords, approveRecord, getRecordsByDoctor };

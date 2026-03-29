@@ -52,4 +52,16 @@ const getAccessLogs = async (req, res) => {
   }
 };
 
-module.exports = { requestAccess, getPatientConsents, respondConsent, getAccessLogs };
+// ✅ NEW — Get all access requests sent by this doctor
+const getConsentsByDoctor = async (req, res) => {
+  try {
+    const { doctorId } = req.params;
+    const consents = await Consent.find({ doctorId })
+      .sort({ createdAt: -1 });
+    res.json(consents);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+module.exports = { requestAccess, getPatientConsents, respondConsent, getAccessLogs, getConsentsByDoctor };
