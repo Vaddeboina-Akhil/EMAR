@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../../services/api';
 import { recordService, authService } from '../../services/apiService';
 import { getUser } from '../../utils/auth';
@@ -7,11 +7,12 @@ import { getUser } from '../../utils/auth';
 const StaffPatientView = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const staff = getUser();
   
   // Patient data
-  const [patient, setPatient] = useState(null);
-  const [patientLoading, setPatientLoading] = useState(true);
+  const [patient, setPatient] = useState(location.state?.patient || null);
+  const [patientLoading, setPatientLoading] = useState(!location.state?.patient);
   
   // Upload form
   const [showUploadForm, setShowUploadForm] = useState(false);
@@ -28,13 +29,20 @@ const StaffPatientView = () => {
       navigate('/staff/dashboard');
       return;
     }
+    
+    // Always fetch from API to ensure fresh data
     fetchPatientData();
   }, [id, navigate]);
 
   const fetchPatientData = async () => {
     try {
       setPatientLoading(true);
-      const patientData = await api.get(`/patients/${id}`);
+      console.log('📡 Fetching patient with ID:', id);
+      const response = await api.get(`/patient/profile/${id}`);
+      console.log('📦 API Response:', response);
+      
+      const patientData = response.patient || response;
+      console.log('✅ Patient Data:', patientData);
       setPatient(patientData);
       
       // Reset form with hospital info
@@ -45,8 +53,9 @@ const StaffPatientView = () => {
         notes: ''
       }));
     } catch (err) {
-      console.error('Failed to fetch patient:', err);
-      alert('❌ Patient not found');
+      console.error('❌ Failed to fetch patient:', err);
+      console.error('Error details:', err.response || err.message);
+      alert('❌ Patient not found: ' + (err.message || 'Unknown error'));
       navigate('/staff/dashboard');
     } finally {
       setPatientLoading(false);
@@ -118,121 +127,164 @@ const StaffPatientView = () => {
   }
 
   if (!patient) {
-    return null;
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#F8F9FA',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        gap: '16px'
+      }}>
+        <div style={{ fontSize: '48px' }}>😕</div>
+        <div style={{ fontSize: '16px', color: '#666' }}>Patient not found</div>
+        <button
+          onClick={() => navigate('/staff/dashboard')}
+          style={{
+            backgroundColor: '#DC143C',
+            color: 'white',
+            border: 'none',
+            padding: '8px 24px',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            marginTop: '16px'
+          }}
+        >
+          Go Back
+        </button>
+      </div>
+    );
   }
 
   return (
     <div style={{
       minHeight: '100vh',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-      backgroundColor: '#F8F9FA'
+      backgroundColor: '#FFFFFF'
     }}>
-      {/* Navbar */}
+      {/* Navbar - EMAR logo on left, buttons on right */}
       <div style={{
         backgroundColor: 'white',
-        borderBottom: '4px solid #DC143C',
+        borderBottom: '3px solid #DC143C',
         padding: '16px 32px',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+        boxShadow: '0 2px 6px rgba(0,0,0,0.08)'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+        <div style={{ fontSize: '26px', fontWeight: 'bold', color: '#DC143C', letterSpacing: '1px' }}>
+          EMAR
+        </div>
+
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
           <button
             onClick={() => navigate('/staff/dashboard')}
             style={{
               backgroundColor: 'transparent',
               color: '#DC143C',
               border: 'none',
-              fontSize: '20px',
+              fontSize: '14px',
+              fontWeight: '600',
               cursor: 'pointer',
-              fontWeight: 'bold'
+              padding: '8px 16px',
+              borderRadius: '4px',
+              transition: 'background-color 0.2s'
             }}
+            onMouseEnter={(e) => e.target.style.backgroundColor = '#FFE6E6'}
+            onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
           >
             ← Back
           </button>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#DC143C', letterSpacing: '2px' }}>
-              EMAR
-            </div>
-            <div style={{ fontSize: '13px', color: '#666', fontWeight: '500' }}>
-              Patient Profile
-            </div>
-          </div>
+          <button
+            onClick={handleLogout}
+            style={{
+              backgroundColor: '#DC143C',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              padding: '8px 16px',
+              fontWeight: '600',
+              fontSize: '14px',
+              cursor: 'pointer',
+              transition: 'background-color 0.2s'
+            }}
+            onMouseEnter={(e) => e.target.style.backgroundColor = '#B71C1C'}
+            onMouseLeave={(e) => e.target.style.backgroundColor = '#DC143C'}
+          >
+            Logout
+          </button>
         </div>
-        <button
-          onClick={handleLogout}
-          style={{
-            backgroundColor: '#DC143C',
-            color: 'white',
-            border: 'none',
-            borderRadius: '50px',
-            padding: '10px 28px',
-            fontWeight: 'bold',
-            fontSize: '13px',
-            cursor: 'pointer',
-            boxShadow: '0 2px 8px rgba(220, 20, 60, 0.3)',
-            transition: 'all 0.2s'
-          }}
-          onMouseEnter={(e) => e.target.style.boxShadow = '0 4px 12px rgba(220, 20, 60, 0.4)'}
-          onMouseLeave={(e) => e.target.style.boxShadow = '0 2px 8px rgba(220, 20, 60, 0.3)'}
-        >
-          Logout
-        </button>
       </div>
 
       {/* Main Content */}
       <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '32px 20px' }}>
-        {/* Patient Header Card */}
+        {/* Patient Header Card - Red background */}
         <div style={{
           backgroundColor: '#DC143C',
-          borderRadius: '20px',
-          padding: '32px',
+          borderRadius: '16px',
+          padding: '28px',
           color: 'white',
           display: 'flex',
           alignItems: 'center',
-          gap: '24px',
+          gap: '28px',
           marginBottom: '32px',
-          boxShadow: '0 4px 16px rgba(220, 20, 60, 0.2)'
+          boxShadow: '0 4px 16px rgba(220, 20, 60, 0.15)'
         }}>
+          {/* Patient Avatar */}
           <div style={{
-            width: '100px',
-            height: '100px',
-            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+            width: '120px',
+            height: '120px',
+            backgroundColor: 'rgba(255, 255, 255, 0.25)',
             borderRadius: '50%',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: '48px',
-            flexShrink: 0
+            fontSize: '56px',
+            flexShrink: 0,
+            overflow: 'hidden',
+            border: '3px solid rgba(255, 255, 255, 0.5)'
           }}>
-            👤
+            {patient.profileImage ? (
+              <img 
+                src={patient.profileImage} 
+                alt={patient.name}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            ) : (
+              '👤'
+            )}
           </div>
+
+          {/* Patient Info */}
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '8px' }}>
+            <div style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '12px' }}>
               {patient.name || 'Patient'}
             </div>
-            <div style={{ fontSize: '15px', marginBottom: '6px', opacity: 0.9 }}>
+            <div style={{ fontSize: '15px', marginBottom: '8px', opacity: 0.95 }}>
               Patient ID: <strong>{patient.patientId}</strong>
             </div>
             {patient.aadhaarId && (
-              <div style={{ fontSize: '15px', marginBottom: '6px', opacity: 0.9 }}>
+              <div style={{ fontSize: '15px', marginBottom: '8px', opacity: 0.95 }}>
                 Aadhaar: <strong>{patient.aadhaarId}</strong>
               </div>
             )}
             {patient.age && (
-              <div style={{ fontSize: '15px', opacity: 0.9 }}>
-                Age: <strong>{patient.age}</strong>
+              <div style={{ fontSize: '15px', opacity: 0.95 }}>
+                Age: <strong>{patient.age} years</strong>
               </div>
             )}
           </div>
+
+          {/* Upload Button */}
           <button
             onClick={() => setShowUploadForm(!showUploadForm)}
             style={{
               backgroundColor: showUploadForm ? '#B71C1C' : 'white',
               color: '#DC143C',
-              borderRadius: '50px',
-              padding: '12px 32px',
+              borderRadius: '8px',
+              padding: '12px 28px',
               fontWeight: 'bold',
               border: 'none',
               cursor: 'pointer',
@@ -477,7 +529,7 @@ const StaffPatientView = () => {
             </div>
           )}
 
-          {patient.allergies && patient.allergies.length > 0 && (
+          {patient.allergies && patient.allergies.trim().length > 0 && (
             <div style={{
               backgroundColor: 'white',
               borderRadius: '16px',
@@ -487,24 +539,13 @@ const StaffPatientView = () => {
               <div style={{ fontSize: '12px', color: '#666', textTransform: 'uppercase', marginBottom: '12px', fontWeight: '600' }}>
                 Allergies
               </div>
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                {patient.allergies.map((allergy, idx) => (
-                  <span key={idx} style={{
-                    backgroundColor: '#FFCDD2',
-                    color: '#DC143C',
-                    borderRadius: '20px',
-                    padding: '6px 12px',
-                    fontSize: '12px',
-                    fontWeight: '600'
-                  }}>
-                    {allergy}
-                  </span>
-                ))}
+              <div style={{ fontSize: '14px', color: '#333', lineHeight: '1.6' }}>
+                {patient.allergies}
               </div>
             </div>
           )}
 
-          {patient.chronicConditions && patient.chronicConditions.length > 0 && (
+          {patient.guardianContact && patient.guardianContact.trim().length > 0 && (
             <div style={{
               backgroundColor: 'white',
               borderRadius: '16px',
@@ -512,21 +553,10 @@ const StaffPatientView = () => {
               boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
             }}>
               <div style={{ fontSize: '12px', color: '#666', textTransform: 'uppercase', marginBottom: '12px', fontWeight: '600' }}>
-                Chronic Conditions
+                Guardian Contact
               </div>
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                {patient.chronicConditions.map((condition, idx) => (
-                  <span key={idx} style={{
-                    backgroundColor: '#FFE0B2',
-                    color: '#E65100',
-                    borderRadius: '20px',
-                    padding: '6px 12px',
-                    fontSize: '12px',
-                    fontWeight: '600'
-                  }}>
-                    {condition}
-                  </span>
-                ))}
+              <div style={{ fontSize: '14px', color: '#333', lineHeight: '1.6' }}>
+                {patient.guardianContact}
               </div>
             </div>
           )}

@@ -205,7 +205,7 @@ const StaffDashboard = () => {
                       {patient.name || patient.username || 'Unknown Patient'}
                     </div>
                     <div style={{ fontSize: '13px', color: '#999', marginTop: '2px' }}>
-                      ID: {patient._id?.slice(-6) || patient._id}
+                      {patient.patientId ? `Patient ID: ${patient.patientId}` : ''}
                     </div>
                   </div>
                 ))}
