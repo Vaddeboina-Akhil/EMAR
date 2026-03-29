@@ -39,7 +39,8 @@ router.get('/doctor/:doctorId', authMiddleware, allowDoctor, getRecordsByDoctor)
 // 👤 PATIENT APIs (protected)
 router.get('/:patientId', authMiddleware, allowPatient, getPatientRecords);
 
-// Upload endpoint with file handling
-router.post('/upload', upload.single('pdfFile'), uploadRecord);
+// Upload endpoints
+router.post('/upload', upload.single('pdfFile'), uploadRecord); // Staff uploads (requires approval)
+router.post('/prescription', authMiddleware, allowDoctor, createPrescription); // Doctor prescriptions (auto-approved)
 
 module.exports = router;

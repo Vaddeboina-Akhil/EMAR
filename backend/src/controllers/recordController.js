@@ -66,6 +66,7 @@ const getStaffRecords = async (req, res) => {
   }
 };
 
+// STAFF UPLOAD: Staff uploads records (requires doctor approval)
 const uploadRecord = async (req, res) => {
   try {
     const {
@@ -96,6 +97,7 @@ const uploadRecord = async (req, res) => {
       console.log(`👨‍⚕️ Doctor assigned: ${doctorName} (ID: ${doctorId})`);
     }
 
+    // STAFF UPLOADS GO TO PENDING STATUS (require approval)
     const record = await MedicalRecord.create({
       patientId,
       patientName,
@@ -110,7 +112,7 @@ const uploadRecord = async (req, res) => {
       doctorName: doctorName || '',
       doctorObjectId: doctorObjectId || null,
       visitDate: visitDate || new Date().toISOString().split('T')[0],
-      status: 'draft',
+      status: 'pending', // Staff uploads go DIRECTLY to pending (no draft stage for this flow)
       uploadedBy: staffId,
       uploaderRole: 'staff',
       fileUrl: fileData ? `data:application/pdf;base64,${fileData}` : null,
@@ -119,11 +121,59 @@ const uploadRecord = async (req, res) => {
     });
 
     res.status(201).json({
-      message: '✅ Record created successfully',
+      message: '✅ Record submitted for approval',
       record
     });
   } catch (err) {
     console.error('Upload error:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// DOCTOR PRESCRIPTION: Doctor creates prescriptions directly (auto-approved, bypass staff approval)
+const createPrescription = async (req, res) => {
+  try {
+    const {
+      patientId, patientName, recordType, diagnosis,
+      medicines, notes, hospitalName, doctorId, doctorName, visitDate
+    } = req.body;
+
+    const Doctor = require('../models/Doctor');
+    let doctorObjectId = null;
+    if (doctorId) {
+      const doctor = await Doctor.findById(doctorId);
+      if (doctor) {
+        doctorObjectId = doctor._id;
+      }
+    }
+
+    // DOCTOR PRESCRIPTIONS ARE AUTO-APPROVED (bypass approval workflow)
+    const record = await MedicalRecord.create({
+      patientId,
+      patientName,
+      recordType: recordType || 'Prescription',
+      diagnosis,
+      medicines: medicines || '',
+      notes: notes || '',
+      hospitalName,
+      doctorId: doctorId || '',
+      doctorName: doctorName || '',
+      doctorObjectId: doctorObjectId || null,
+      visitDate: visitDate || new Date().toISOString().split('T')[0],
+      status: 'approved', // DOCTOR PRESCRIPTIONS ARE DIRECTLY APPROVED
+      uploadedBy: doctorId,
+      uploaderRole: 'doctor',
+      approvedBy: doctorId,
+      approvalDate: new Date()
+    });
+
+    console.log(`📋 Doctor prescription created and auto-approved: ${recordType}`);
+    res.status(201).json({
+      message: '✅ Prescription created successfully',
+      record
+    });
+  } catch (err) {
+    console.error('Prescription error:', err);
     res.status(500).json({ message: err.message });
   }
 };
@@ -231,6 +281,7 @@ module.exports = {
   submitRecord,
   getStaffRecords,
   uploadRecord,
+  createPrescription,
   getPatientRecords,
   getPendingRecords,
   approveRecord,
