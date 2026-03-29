@@ -70,7 +70,7 @@ const uploadRecord = async (req, res) => {
   try {
     const {
       patientId, patientName, recordType, diagnosis,
-      medicines, notes, hospitalName, staffId, staffName
+      medicines, notes, hospitalName, staffId, staffName, doctorId, doctorName, visitDate
     } = req.body;
 
     let fileData = null;
@@ -85,6 +85,17 @@ const uploadRecord = async (req, res) => {
       console.log(`📄 PDF received: ${fileName} (${fileSize} bytes)`);
     }
 
+    // Look up doctor's MongoDB _id if doctorId is provided
+    let doctorObjectId = null;
+    if (doctorId) {
+      const Doctor = require('../models/Doctor');
+      const doctor = await Doctor.findById(doctorId);
+      if (doctor) {
+        doctorObjectId = doctor._id;
+      }
+      console.log(`👨‍⚕️ Doctor assigned: ${doctorName} (ID: ${doctorId})`);
+    }
+
     const record = await MedicalRecord.create({
       patientId,
       patientName,
@@ -95,6 +106,10 @@ const uploadRecord = async (req, res) => {
       hospitalName,
       staffId,
       staffName,
+      doctorId: doctorId || '',
+      doctorName: doctorName || '',
+      doctorObjectId: doctorObjectId || null,
+      visitDate: visitDate || new Date().toISOString().split('T')[0],
       status: 'draft',
       uploadedBy: staffId,
       uploaderRole: 'staff',
@@ -133,11 +148,21 @@ const getPendingRecords = async (req, res) => {
     const doctor = await Doctor.findById(doctorId);
     if (!doctor) return res.status(404).json({ message: 'Doctor not found' });
 
-    const records = await MedicalRecord.find({
+    // First try to find records assigned to this specific doctor
+    let records = await MedicalRecord.find({
       status: 'pending',
-      hospitalName: doctor.hospitalName
+      doctorObjectId: doctor._id
     }).sort({ createdAt: -1 });
 
+    // If no specifically assigned records, fall back to hospital-based records
+    if (records.length === 0) {
+      records = await MedicalRecord.find({
+        status: 'pending',
+        hospitalName: doctor.hospitalName
+      }).sort({ createdAt: -1 });
+    }
+
+    console.log(`📋 Found ${records.length} pending records for doctor ${doctor.name}`);
     res.json(records);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -183,8 +208,18 @@ const approveRecord = async (req, res) => {
 const getRecordsByDoctor = async (req, res) => {
   try {
     const { doctorId } = req.params;
-    const records = await MedicalRecord.find({ doctorId })
+    
+    // Try to find using doctorObjectId first (MongoDB ObjectId)
+    let records = await MedicalRecord.find({ doctorObjectId: doctorId })
       .sort({ createdAt: -1 });
+    
+    // Fall back to searching by doctorId string if no results
+    if (records.length === 0) {
+      records = await MedicalRecord.find({ doctorId })
+        .sort({ createdAt: -1 });
+    }
+    
+    console.log(`📋 Found ${records.length} records for doctor ${doctorId}`);
     res.json(records);
   } catch (err) {
     res.status(500).json({ message: err.message });

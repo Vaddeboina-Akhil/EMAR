@@ -203,3 +203,16 @@ exports.addDoctorRecord = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// Get all doctors for dropdown/selection
+exports.getAllDoctors = async (req, res) => {
+  try {
+    const doctors = await Doctor.find({ verified: true })
+      .select('_id doctorId name specialization hospitalName email')
+      .sort({ name: 1 });
+    
+    res.json({ doctors });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};

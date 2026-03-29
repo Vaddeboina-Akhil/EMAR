@@ -12,6 +12,7 @@ const medicalRecordSchema = new mongoose.Schema({
   hospitalName: { type: String },
   doctorName: { type: String },
   doctorId: { type: String },
+  doctorObjectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Doctor' }, // Reference to Doctor model
   staffName: { type: String },
   staffId: { type: String },
   visitDate: { type: String },

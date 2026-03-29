@@ -14,11 +14,16 @@ const StaffPatientView = () => {
   const [patient, setPatient] = useState(location.state?.patient || null);
   const [patientLoading, setPatientLoading] = useState(!location.state?.patient);
   
+  // Doctors data
+  const [doctors, setDoctors] = useState([]);
+  const [doctorsLoading, setDoctorsLoading] = useState(true);
+  
   // Upload form
   const [showUploadForm, setShowUploadForm] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [formData, setFormData] = useState({
     recordType: 'Prescription',
+    doctorId: '',
     doctorName: '',
     diagnosis: '',
     pdfFile: null
@@ -32,7 +37,22 @@ const StaffPatientView = () => {
     
     // Always fetch from API to ensure fresh data
     fetchPatientData();
+    fetchDoctors();
   }, [id, navigate]);
+
+  const fetchDoctors = async () => {
+    try {
+      setDoctorsLoading(true);
+      console.log('📡 Fetching doctors list...');
+      const response = await api.get('/doctors/all');
+      console.log('✅ Doctors:', response.doctors);
+      setDoctors(response.doctors || []);
+    } catch (err) {
+      console.error('❌ Failed to fetch doctors:', err);
+    } finally {
+      setDoctorsLoading(false);
+    }
+  };
 
   const fetchPatientData = async () => {
     try {
@@ -65,8 +85,8 @@ const StaffPatientView = () => {
   const handleUploadRecord = async (e) => {
     e.preventDefault();
     
-    if (!formData.doctorName.trim()) {
-      alert('⚠️ Please enter doctor name');
+    if (!formData.doctorId) {
+      alert('⚠️ Please select a doctor');
       return;
     }
 
@@ -90,13 +110,18 @@ const StaffPatientView = () => {
       const staffId = staff?._id || staff?.id;
       const treatmentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
       
+      // Get selected doctor info
+      const selectedDoctor = doctors.find(d => d._id === formData.doctorId);
+      const doctorName = selectedDoctor?.name || 'Unknown';
+      
       // Create FormData for file upload
       const formDataObj = new FormData();
       formDataObj.append('patientId', patient._id || patient.patientId);
       formDataObj.append('patientName', patient.name);
       formDataObj.append('recordType', formData.recordType);
       formDataObj.append('diagnosis', formData.diagnosis);
-      formDataObj.append('doctorName', formData.doctorName);
+      formDataObj.append('doctorId', formData.doctorId);
+      formDataObj.append('doctorName', doctorName);
       formDataObj.append('visitDate', treatmentDate);
       formDataObj.append('staffId', staffId);
       formDataObj.append('staffName', staff?.name || 'Unknown');
@@ -109,6 +134,7 @@ const StaffPatientView = () => {
       alert('✅ Record uploaded successfully!');
       setFormData({
         recordType: 'Prescription',
+        doctorId: '',
         doctorName: '',
         diagnosis: '',
         pdfFile: null
@@ -368,17 +394,23 @@ const StaffPatientView = () => {
                 </select>
               </div>
 
-              {/* Doctor Name */}
+              {/* Doctor Selection */}
               <div>
                 <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600', fontSize: '13px', color: '#333' }}>
-                  Doctor Name *
+                  Doctor *
                 </label>
-                <input
-                  type="text"
-                  value={formData.doctorName}
-                  onChange={(e) => setFormData({ ...formData, doctorName: e.target.value })}
-                  placeholder="Enter doctor's full name"
+                <select
+                  value={formData.doctorId}
+                  onChange={(e) => {
+                    const selectedDoctor = doctors.find(d => d._id === e.target.value);
+                    setFormData({ 
+                      ...formData, 
+                      doctorId: e.target.value,
+                      doctorName: selectedDoctor?.name || ''
+                    });
+                  }}
                   required
+                  disabled={doctorsLoading}
                   style={{
                     width: '100%',
                     padding: '10px 12px',
@@ -386,13 +418,23 @@ const StaffPatientView = () => {
                     borderRadius: '8px',
                     fontSize: '14px',
                     boxSizing: 'border-box',
-                    fontFamily: 'inherit',
+                    backgroundColor: 'white',
+                    cursor: doctorsLoading ? 'not-allowed' : 'pointer',
                     transition: 'all 0.2s',
-                    outline: 'none'
+                    opacity: doctorsLoading ? 0.6 : 1
                   }}
                   onFocus={(e) => e.target.style.borderColor = '#DC143C'}
                   onBlur={(e) => e.target.style.borderColor = '#E0E0E0'}
-                />
+                >
+                  <option value="">
+                    {doctorsLoading ? '⏳ Loading doctors...' : 'Select a doctor'}
+                  </option>
+                  {doctors.map((doctor) => (
+                    <option key={doctor._id} value={doctor._id}>
+                      {doctor.name} - {doctor.specialization}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* Short Diagnosis */}
