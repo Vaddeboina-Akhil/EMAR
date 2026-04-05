@@ -1,5 +1,6 @@
 const MedicalRecord = require('../models/MedicalRecord');
 const Doctor = require('../models/Doctor');
+const AccessLog = require('../models/AccessLog');
 
 // 📋 STAFF: Create record in DRAFT status
 const createDraftRecord = async (req, res) => {
@@ -120,6 +121,17 @@ const uploadRecord = async (req, res) => {
       fileSize
     });
 
+    // 📝 Log the record upload
+    await AccessLog.create({
+      patientId,
+      doctorName: staffName || 'Staff',
+      hospitalName,
+      accessType: 'record_uploaded',
+      reason: `${recordType} uploaded - ${diagnosis || ''}`,
+      recordsAccessed: recordType,
+      timestamp: new Date()
+    });
+
     res.status(201).json({
       message: '✅ Record submitted for approval',
       record
@@ -165,6 +177,17 @@ const createPrescription = async (req, res) => {
       uploaderRole: 'doctor',
       approvedBy: doctorId,
       approvalDate: new Date()
+    });
+
+    // 📝 Log the prescription creation (auto-approved)
+    await AccessLog.create({
+      patientId,
+      doctorName,
+      hospitalName,
+      accessType: 'record_uploaded',
+      reason: `Prescription created by Dr. ${doctorName} - ${diagnosis || ''}`,
+      recordsAccessed: 'Prescription',
+      timestamp: new Date()
     });
 
     console.log(`📋 Doctor prescription created and auto-approved: ${recordType}`);
@@ -230,6 +253,10 @@ const approveRecord = async (req, res) => {
       return res.status(400).json({ message: 'Invalid status' });
     }
 
+    // Fetch the record first to get patient and record info
+    const originalRecord = await MedicalRecord.findById(id);
+    if (!originalRecord) return res.status(404).json({ message: 'Record not found' });
+
     const updateData = {
       status,
       approvedBy: doctorId,
@@ -246,6 +273,22 @@ const approveRecord = async (req, res) => {
       updateData,
       { new: true }
     );
+
+    // 📝 Log the record approval/rejection
+    const accessType = status === 'approved' ? 'record_approved' : 'record_rejected';
+    const reason = status === 'approved' 
+      ? `${originalRecord.recordType} approved by Dr. ${doctorName}`
+      : `${originalRecord.recordType} rejected - ${rejectionReason || 'No reason'}`;
+
+    await AccessLog.create({
+      patientId: originalRecord.patientId,
+      doctorName,
+      hospitalName: originalRecord.hospitalName,
+      accessType,
+      reason,
+      recordsAccessed: originalRecord.recordType,
+      timestamp: new Date()
+    });
 
     if (!record) return res.status(404).json({ message: 'Record not found' });
     res.json(record);

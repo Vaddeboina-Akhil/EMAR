@@ -134,10 +134,11 @@ const DoctorDashboard = () => {
       <div style={{ position: 'absolute', bottom: '-60px', right: '120px', width: '200px', height: '200px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.04)' }} />
 
       <div style={{ width: '100px', height: '100px', borderRadius: '50%', border: '3px solid rgba(255,255,255,0.4)', overflow: 'hidden', flexShrink: 0, backgroundColor: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        {user?.profileImage
-          ? <img src={user.profileImage} alt="Doctor" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          : <span style={{ fontSize: '40px' }}>👨‍⚕️</span>
-        }
+        {user?.profileImage ? (
+          <img src={user.profileImage} alt="Doctor" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        ) : (
+          <span style={{ fontSize: '40px' }}>👨‍⚕️</span>
+        )}
       </div>
 
       <div style={{ flex: 1, color: 'white' }}>

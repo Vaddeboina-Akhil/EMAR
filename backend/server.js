@@ -25,6 +25,10 @@ app.use('/api/doctors', require('./src/routes/doctorRoutes'));
 // ✅ Add these from second file
 app.use('/api/consent', require('./src/routes/consentRoutes'));
 
+// ✅ Access logs endpoint (for audit trail)
+const { getAccessLogs } = require('./src/controllers/consentController');
+app.get('/api/access-logs/:patientId', getAccessLogs);
+
 // ❌ Only add blockchain if file exists
 // app.use('/api/blockchain', require('./src/routes/blockchainRoutes'));
 

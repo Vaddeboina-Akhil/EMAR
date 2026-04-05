@@ -9,6 +9,7 @@ const Login = () => {
   const [animState, setAnimState] = useState('idle');
   const [slideDir, setSlideDir] = useState('left');
   const [formData, setFormData] = useState({ id: '', password: '' });
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
   const roleColors = {
@@ -34,6 +35,7 @@ const Login = () => {
     setSlideDir(dir);
     setAnimState('exit');
     setSelectedRole(newRole);
+    setFormData({ id: '', password: '' });
     setTimeout(() => {
       setDisplayRole(newRole);
       setAnimState('enter');
@@ -42,31 +44,77 @@ const Login = () => {
   };
 
   const handleSubmit = async () => {
+    if (isLoading) {
+      console.log('⏳ Already loading, ignoring duplicate click');
+      return;
+    }
+    
+    console.log('🔐 Login attempt:', { selectedRole, licenseId: formData.id, password: '***' });
+    setIsLoading(true);
+    
     try {
+      if (selectedRole === 'doctor') {
+        console.log('🏥 Logging in as doctor...');
+        try {
+          const result = await api.post('/auth/doctor/login', { licenseId: formData.id.trim(), password: formData.password.trim() });
+          console.log('✅ Doctor login result:', result);
+          console.log('   - Has token?', !!result.token);
+          console.log('   - Has user?', !!result.user);
+          console.log('   - Token:', result.token ? result.token.substring(0, 20) + '...' : 'NO TOKEN');
+          console.log('   - User:', result.user);
+          
+          if (!result.token) {
+            console.error('❌ No token in response');
+            alert('No token received: ' + (result.message || 'Unknown error'));
+            setIsLoading(false);
+            return;
+          }
+          
+          if (!result.user) {
+            console.error('❌ No user in response');
+            alert('No user data received');
+            setIsLoading(false);
+            return;
+          }
+          
+          console.log('💾 Setting localStorage token...');
+          localStorage.setItem('emar_token', result.token);
+          console.log('✅ Token saved to localStorage');
+          
+          console.log('👤 Calling setUser...');
+          setUser(result.user);
+          console.log('✅ setUser called');
+          
+          console.log('📍 Navigating to /doctor/overview...');
+          navigate('/doctor/overview');
+          console.log('✅ Navigation called');
+        } catch (apiError) {
+          console.error('❌ API Error:', apiError);
+          setIsLoading(false);
+          throw apiError;
+        }
+        return;
+      }
       if (selectedRole === 'patient') {
-        const result = await api.post('/auth/patient/login', { aadhaarId: formData.id, password: formData.password });
+        console.log('👤 Logging in as patient...');
+        const result = await api.post('/auth/patient/login', { aadhaarId: formData.id.trim(), password: formData.password.trim() });
+        console.log('✅ Patient login result:', result);
         if (result.token) {
           localStorage.setItem('emar_token', result.token);
           setUser(result.user);
           navigate('/patient/dashboard');
         } else {
           alert(result.message || 'Login failed');
-        }
-        return;
-      }
-      if (selectedRole === 'doctor') {
-        const result = await api.post('/auth/doctor/login', { licenseId: formData.id, password: formData.password });
-        if (result.token) {
-          localStorage.setItem('emar_token', result.token);
-          setUser(result.user);
-          navigate('/doctor/overview');
-        } else {
-          alert(result.message || 'Login failed');
+          setIsLoading(false);
         }
         return;
       }
     } catch (error) {
-      alert(error.message || 'Login failed');
+      console.error('❌ Login error caught:', error);
+      console.error('   Error message:', error.message);
+      console.error('   Error stack:', error.stack);
+      alert('Login Error: ' + (error.message || 'Unknown error'));
+      setIsLoading(false);
     }
   };
 
@@ -234,20 +282,21 @@ const Login = () => {
               width: '100%',
               height: '56px',
               borderRadius: '50px',
-              backgroundColor: buttonColors[selectedRole],
-              color: 'white',
+              backgroundColor: isLoading ? '#ccc' : buttonColors[selectedRole],
+              color: isLoading ? '#666' : 'white',
               fontSize: '20px',
               fontWeight: 'bold',
-              cursor: 'pointer',
+              cursor: isLoading ? 'not-allowed' : 'pointer',
               userSelect: 'none',
               WebkitTapHighlightColor: 'transparent',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               transition: 'background-color 0.4s ease',
+              opacity: isLoading ? 0.6 : 1,
             }}
           >
-            Login Securely
+            {isLoading ? '⏳ Logging in...' : 'Login Securely'}
           </div>
         </div>
 
