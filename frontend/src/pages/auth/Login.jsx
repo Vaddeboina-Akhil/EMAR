@@ -52,6 +52,13 @@ const Login = () => {
     console.log('🔐 Login attempt:', { selectedRole, licenseId: formData.id, password: '***' });
     setIsLoading(true);
     
+    // Safety timeout - reset loading after 10 seconds
+    const timeout = setTimeout(() => {
+      console.error('❌ Login timeout - taking too long');
+      setIsLoading(false);
+      alert('Login taking too long. Please try again.');
+    }, 10000);
+    
     try {
       if (selectedRole === 'doctor') {
         console.log('🏥 Logging in as doctor...');
@@ -65,6 +72,7 @@ const Login = () => {
           
           if (!result.token) {
             console.error('❌ No token in response');
+            clearTimeout(timeout);
             alert('No token received: ' + (result.message || 'Unknown error'));
             setIsLoading(false);
             return;
@@ -86,10 +94,12 @@ const Login = () => {
           console.log('✅ setUser called');
           
           console.log('📍 Navigating to /doctor/overview...');
+          clearTimeout(timeout);
           navigate('/doctor/overview');
           console.log('✅ Navigation called');
         } catch (apiError) {
           console.error('❌ API Error:', apiError);
+          clearTimeout(timeout);
           setIsLoading(false);
           throw apiError;
         }
@@ -102,8 +112,10 @@ const Login = () => {
         if (result.token) {
           localStorage.setItem('emar_token', result.token);
           setUser(result.user);
+          clearTimeout(timeout);
           navigate('/patient/dashboard');
         } else {
+          clearTimeout(timeout);
           alert(result.message || 'Login failed');
           setIsLoading(false);
         }
@@ -113,6 +125,7 @@ const Login = () => {
       console.error('❌ Login error caught:', error);
       console.error('   Error message:', error.message);
       console.error('   Error stack:', error.stack);
+      clearTimeout(timeout);
       alert('Login Error: ' + (error.message || 'Unknown error'));
       setIsLoading(false);
     }

@@ -133,11 +133,15 @@ const DoctorDashboard = () => {
       <div style={{ position: 'absolute', top: '-40px', right: '-40px', width: '160px', height: '160px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.05)' }} />
       <div style={{ position: 'absolute', bottom: '-60px', right: '120px', width: '200px', height: '200px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.04)' }} />
 
-      <div style={{ width: '100px', height: '100px', borderRadius: '50%', border: '3px solid rgba(255,255,255,0.4)', overflow: 'hidden', flexShrink: 0, backgroundColor: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ width: '100px', height: '100px', borderRadius: '50%', border: '3px solid rgba(255,255,255,0.4)', overflow: 'hidden', flexShrink: 0, backgroundColor: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '40px', fontWeight: 'bold' }}>
         {user?.profileImage ? (
-          <img src={user.profileImage} alt="Doctor" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <img
+            src={user.profileImage}
+            alt="Profile"
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          />
         ) : (
-          <span style={{ fontSize: '40px' }}>👨‍⚕️</span>
+          user?.name ? user.name.charAt(0).toUpperCase() : '?'
         )}
       </div>
 
