@@ -3,6 +3,10 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/auth/Login';
 import Signup from './pages/auth/Signup';
 
+// Admin
+import AdminLogin from './pages/admin/AdminLogin';
+import AdminDashboard from './pages/admin/AdminDashboard';
+
 // Patient
 import PatientDashboard from './pages/patient/Dashboard';
 import PatientMedicalHistory from './pages/patient/MedicalHistory';
@@ -33,6 +37,10 @@ function App() {
       {/* Auth */}
       <Route path="/" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
+
+      {/* Admin — hidden portal */}
+      <Route path="/admin/login" element={<AdminLogin />} />
+      <Route path="/admin/dashboard" element={<AdminDashboard />} />
 
       {/* Patient */}
       <Route path="/patient/dashboard" element={<PatientDashboard />} />

@@ -16,6 +16,7 @@ const doctorSchema = new mongoose.Schema({
   doctorId: { type: String, unique: true },
   role: { type: String, default: 'doctor' },
   verified: { type: Boolean, default: false },
+  status: { type: String, enum: ['pending', 'approved', 'rejected', 'blocked'], default: 'pending' },
   createdAt: { type: Date, default: Date.now }
 });
 

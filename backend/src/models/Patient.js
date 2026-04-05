@@ -14,6 +14,7 @@ const patientSchema = new mongoose.Schema({
   patientId: { type: String, unique: true },
   profileImage: { type: String, default: null }, // base64 string
   role: { type: String, default: 'patient' },
+  status: { type: String, enum: ['active', 'blocked'], default: 'active' },
   createdAt: { type: Date, default: Date.now }
 });
 

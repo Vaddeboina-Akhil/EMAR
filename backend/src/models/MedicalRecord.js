@@ -29,6 +29,11 @@ const medicalRecordSchema = new mongoose.Schema({
   approvalDate: { type: Date },
   rejectionReason: { type: String },
   
+  // Freeze/Flag mechanism
+  isFrozen: { type: Boolean, default: false },
+  isFlagged: { type: Boolean, default: false },
+  flagReason: { type: String },
+  
   // PDF File storage (base64 encoded)
   fileUrl: { type: String }, // base64 encoded PDF
   fileName: { type: String },

@@ -7,17 +7,32 @@ import { api } from '../../services/api';
 
 const DoctorDashboard = () => {
   const navigate = useNavigate();
-  const user = getUser();
+  const userFromStorage = getUser();
+  const [doctorData, setDoctorData] = useState(userFromStorage);
   const [stats, setStats] = useState({ pendingRecords: 0, totalPatients: 0, accessRequests: 0 });
   const [pendingRecords, setPendingRecords] = useState([]);
   const [recentActivity, setRecentActivity] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (user?._id) {
+    if (userFromStorage?._id) {
+      fetchDoctorData();
       fetchStats();
     }
-  }, [user?._id]);
+  }, [userFromStorage?._id]);
+
+  // Fetch fresh doctor data from API
+  const fetchDoctorData = async () => {
+    try {
+      const response = await api.get('/doctor/me');
+      if (response) {
+        setDoctorData(response);
+      }
+    } catch (err) {
+      console.warn('Could not fetch fresh doctor data:', err.message);
+      // Keep using localStorage data as fallback
+    }
+  };
 
   const formatRelativeTime = (dateStr) => {
     if (!dateStr) return '—';
@@ -33,7 +48,7 @@ const DoctorDashboard = () => {
   const fetchStats = async () => {
     try {
       setLoading(true);
-      const doctorId = user?._id;
+      const doctorId = userFromStorage?._id;
 
       // 1. Pending records (staff-uploaded, awaiting doctor approval)
       const pending = await recordService.getPendingRecords(doctorId);
@@ -134,23 +149,23 @@ const DoctorDashboard = () => {
       <div style={{ position: 'absolute', bottom: '-60px', right: '120px', width: '200px', height: '200px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.04)' }} />
 
       <div style={{ width: '100px', height: '100px', borderRadius: '50%', border: '3px solid rgba(255,255,255,0.4)', overflow: 'hidden', flexShrink: 0, backgroundColor: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '40px', fontWeight: 'bold' }}>
-        {user?.profileImage ? (
+        {doctorData?.profileImage ? (
           <img
-            src={user.profileImage}
+            src={doctorData.profileImage}
             alt="Profile"
             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
           />
         ) : (
-          user?.name ? user.name.charAt(0).toUpperCase() : '?'
+          doctorData?.name ? doctorData.name.charAt(0).toUpperCase() : '?'
         )}
       </div>
 
       <div style={{ flex: 1, color: 'white' }}>
-        <div style={{ fontSize: '26px', fontWeight: '900', marginBottom: '6px' }}>{user?.name || 'Doctor Name'}</div>
-        <div style={{ fontSize: '14px', opacity: 0.85, marginBottom: '4px', fontWeight: '600' }}>License ID: &nbsp;<span style={{ opacity: 1 }}>{user?.licenseId || 'MED—'}</span></div>
-        <div style={{ fontSize: '14px', opacity: 0.85, marginBottom: '4px', fontWeight: '600' }}>Specialization: &nbsp;<span style={{ opacity: 1 }}>{user?.specialization || '—'}</span></div>
-        <div style={{ fontSize: '14px', opacity: 0.85, marginBottom: '4px', fontWeight: '600' }}>Age: &nbsp;<span style={{ opacity: 1 }}>{user?.age || '—'}</span></div>
-        <div style={{ fontSize: '14px', opacity: 0.85, fontWeight: '600' }}>Hospital Name: &nbsp;<span style={{ opacity: 1 }}>{user?.hospitalName || '—'}</span></div>
+        <div style={{ fontSize: '26px', fontWeight: '900', marginBottom: '6px' }}>{doctorData?.name || 'Loading...'}</div>
+        <div style={{ fontSize: '14px', opacity: 0.85, marginBottom: '4px', fontWeight: '600' }}>License ID: &nbsp;<span style={{ opacity: 1 }}>{doctorData?.licenseId || doctorData?.doctorId || '—'}</span></div>
+        <div style={{ fontSize: '14px', opacity: 0.85, marginBottom: '4px', fontWeight: '600' }}>Specialization: &nbsp;<span style={{ opacity: 1 }}>{doctorData?.specialization || '—'}</span></div>
+        <div style={{ fontSize: '14px', opacity: 0.85, marginBottom: '4px', fontWeight: '600' }}>Age: &nbsp;<span style={{ opacity: 1 }}>{doctorData?.age || '—'}</span></div>
+        <div style={{ fontSize: '14px', opacity: 0.85, fontWeight: '600' }}>Hospital: &nbsp;<span style={{ opacity: 1 }}>{doctorData?.hospitalName || '—'}</span></div>
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: 'white', borderRadius: '50px', padding: '8px 20px', alignSelf: 'flex-start' }}>

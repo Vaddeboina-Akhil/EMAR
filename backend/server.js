@@ -21,6 +21,7 @@ app.use('/api/auth', require('./src/routes/authRoutes'));
 app.use('/api/records', require('./src/routes/recordRoutes'));
 app.use('/api/patient', require('./src/routes/patientRoutes'));
 app.use('/api/doctors', require('./src/routes/doctorRoutes'));
+app.use('/api/admin', require('./src/routes/adminRoutes'));
 
 // ✅ Add these from second file
 app.use('/api/consent', require('./src/routes/consentRoutes'));
