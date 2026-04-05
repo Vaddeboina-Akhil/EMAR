@@ -6,6 +6,11 @@ import Signup from './pages/auth/Signup';
 // Admin
 import AdminLogin from './pages/admin/AdminLogin';
 import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminDoctors from './pages/admin/AdminDoctors';
+import AdminPatients from './pages/admin/AdminPatients';
+import AdminStaff from './pages/admin/AdminStaff';
+import AdminRecords from './pages/admin/AdminRecords';
+import AdminLogs from './pages/admin/AdminLogs';
 
 // Patient
 import PatientDashboard from './pages/patient/Dashboard';
@@ -41,6 +46,11 @@ function App() {
       {/* Admin — hidden portal */}
       <Route path="/admin/login" element={<AdminLogin />} />
       <Route path="/admin/dashboard" element={<AdminDashboard />} />
+      <Route path="/admin/doctors" element={<AdminDoctors />} />
+      <Route path="/admin/patients" element={<AdminPatients />} />
+      <Route path="/admin/staff" element={<AdminStaff />} />
+      <Route path="/admin/records" element={<AdminRecords />} />
+      <Route path="/admin/logs" element={<AdminLogs />} />
 
       {/* Patient */}
       <Route path="/patient/dashboard" element={<PatientDashboard />} />
