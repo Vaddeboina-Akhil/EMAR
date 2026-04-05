@@ -49,19 +49,27 @@ const PatientAuditTrail = () => {
   const [selectedType, setSelectedType] = useState('All Types');
   const [showDropdown, setShowDropdown] = useState(false);
 
-  const accessTypes = ['All Types', 'approved', 'denied', 'emergency', 'view'];
+  const accessTypes = ['All Types', 'requested', 'approved', 'denied', 'record_uploaded', 'record_approved', 'record_rejected', 'emergency', 'view'];
 
   const typeLabels = {
     'All Types': 'All Types',
+    'requested': 'Access Requested',
     'approved': 'Approved Access',
     'denied': 'Denied Access',
+    'record_uploaded': 'Record Uploaded',
+    'record_approved': 'Record Approved',
+    'record_rejected': 'Record Rejected',
     'emergency': 'Emergency Access',
     'view': 'Record View',
   };
 
   const typeColors = {
+    'requested': '#3498DB',
     'approved': '#2ECC71',
     'denied': '#E74C3C',
+    'record_uploaded': '#9B59B6',
+    'record_approved': '#27AE60',
+    'record_rejected': '#C0392B',
     'emergency': '#F39C12',
     'view': '#2979FF',
   };
@@ -136,7 +144,7 @@ const PatientAuditTrail = () => {
             Audit Trail
           </div>
           <div style={{ fontSize: '14px', opacity: 0.85, marginBottom: '16px' }}>
-            Complete log of who accessed your medical records
+            Complete log of all activities including access requests, approvals, uploads, and record updates
           </div>
 
           {/* Filter */}
@@ -234,7 +242,7 @@ const PatientAuditTrail = () => {
               No audit logs yet
             </div>
             <div style={{ fontSize: '14px', color: '#999', marginTop: '4px' }}>
-              Access logs will appear here when doctors view your records
+              Logs will appear here when doctors request access, upload records, or approve/reject your medical records
             </div>
           </div>
         )}
@@ -259,6 +267,10 @@ const PatientAuditTrail = () => {
                 }}>
                   {log.accessType === 'approved' ? '✅' :
                    log.accessType === 'denied' ? '❌' :
+                   log.accessType === 'requested' ? '📋' :
+                   log.accessType === 'record_uploaded' ? '📤' :
+                   log.accessType === 'record_approved' ? '☑️' :
+                   log.accessType === 'record_rejected' ? '⛔' :
                    log.accessType === 'emergency' ? '🚨' : '👁️'}
                 </div>
 

@@ -6,10 +6,11 @@ import { api } from '../../services/api';
 
 const PatientDashboard = () => {
   const navigate = useNavigate();
-  const user = getUser();
+  const userFromStorage = getUser();
+  const [userProfile, setUserProfile] = useState(userFromStorage);
   
   // 🔐 Validate that the logged-in user is actually a patient
-  if (!user || user.role !== 'patient') {
+  if (!userFromStorage || userFromStorage.role !== 'patient') {
     return (
       <div style={{
         display: 'flex', justifyContent: 'center', alignItems: 'center',
@@ -43,29 +44,37 @@ const PatientDashboard = () => {
     );
   }
 
-  const age = user?.dob ? calculateAge(user.dob) : user?.age || '—';
+  const age = userProfile?.dob ? calculateAge(userProfile.dob) : userProfile?.age || '—';
 
   const [stats, setStats] = useState({ recordsCount: 0, accessLogsCount: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchData = async () => {
       try {
-        const patientId = user?._id || user?.id;
+        const patientId = userFromStorage?._id || userFromStorage?.id;
         if (!patientId) return;
-        const data = await api.get(`/patient/stats/${patientId}`);
-        if (data?.stats) setStats(data.stats);
+        
+        // Fetch fresh profile data from database
+        const profileData = await api.get(`/patient/profile/${patientId}`);
+        if (profileData?.patient) {
+          setUserProfile(profileData.patient);
+        }
+        
+        // Fetch stats
+        const statsData = await api.get(`/patient/stats/${patientId}`);
+        if (statsData?.stats) setStats(statsData.stats);
       } catch (err) {
-        console.error('Failed to fetch stats:', err);
+        console.error('Failed to fetch data:', err);
       } finally {
         setLoading(false);
       }
     };
-    fetchStats();
-  }, []);
+    fetchData();
+  }, [userFromStorage]);
 
-  const allergiesList = user?.allergies
-    ? user.allergies.split(',').map(a => a.trim()).filter(Boolean)
+  const allergiesList = userProfile?.allergies
+    ? userProfile.allergies.split(',').map(a => a.trim()).filter(Boolean)
     : [];
 
   const handleNav = (page) => {
@@ -115,30 +124,30 @@ const PatientDashboard = () => {
             overflow: 'hidden', flexShrink: 0,
             border: '3px solid rgba(255,255,255,0.4)'
           }}>
-            {user?.profileImage ? (
+            {userProfile?.profileImage ? (
               <img
-                src={user.profileImage}
+                src={userProfile.profileImage}
                 alt="Profile"
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />
             ) : (
-              user?.name ? user.name.charAt(0).toUpperCase() : '?'
+              userProfile?.name ? userProfile.name.charAt(0).toUpperCase() : '?'
             )}
           </div>
 
           {/* Info */}
           <div style={{ flexGrow: 1 }}>
             <div style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '8px' }}>
-              {user?.name || 'Patient Name'}
+              {userProfile?.name || 'Patient Name'}
             </div>
             <div style={{ fontSize: '15px', fontWeight: '600', marginBottom: '4px' }}>
-              Patient ID : {user?.patientId || user?._id?.slice(-6) || '—'}
+              Patient ID : {userProfile?.patientId || userProfile?._id?.slice(-6) || '—'}
             </div>
             <div style={{ fontSize: '14px', marginBottom: '4px' }}>
-              Aadhaar: {user?.aadhaarId || '—'}
+              Aadhaar: {userProfile?.aadhaarId || '—'}
             </div>
             <div style={{ fontSize: '14px' }}>
-              Age : {age} &nbsp;|&nbsp; 📞 {user?.phone || '—'}
+              Age : {age} &nbsp;|&nbsp; 📞 {userProfile?.phone || '—'}
             </div>
           </div>
 
@@ -170,7 +179,7 @@ const PatientDashboard = () => {
             </div>
             <div style={{ fontSize: '28px', marginTop: '4px' }}>💧</div>
             <div style={{ fontSize: '48px', fontWeight: '900', color: '#2D6A4F' }}>
-              {user?.bloodGroup || '—'}
+              {userProfile?.bloodGroup || '—'}
             </div>
           </div>
 
@@ -186,7 +195,7 @@ const PatientDashboard = () => {
               GUARDIAN CONTACT
             </div>
             <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#2D6A4F', marginTop: '8px' }}>
-              {user?.guardianContact || '—'}
+              {userProfile?.guardianContact || '—'}
             </div>
           </div>
 

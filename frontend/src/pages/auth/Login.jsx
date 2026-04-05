@@ -6,9 +6,10 @@ import { api } from '../../services/api';
 const Login = () => {
   const [selectedRole, setSelectedRole] = useState('patient');
   const [displayRole, setDisplayRole] = useState('patient');
-  const [animState, setAnimState] = useState('idle'); // 'idle' | 'exit' | 'enter'
+  const [animState, setAnimState] = useState('idle');
   const [slideDir, setSlideDir] = useState('left');
   const [formData, setFormData] = useState({ id: '', password: '' });
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
   const roleColors = {
@@ -34,7 +35,7 @@ const Login = () => {
     setSlideDir(dir);
     setAnimState('exit');
     setSelectedRole(newRole);
-    // After exit animation (300ms), swap image and play enter animation
+    setFormData({ id: '', password: '' });
     setTimeout(() => {
       setDisplayRole(newRole);
       setAnimState('enter');
@@ -42,33 +43,91 @@ const Login = () => {
     }, 300);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
+    if (isLoading) {
+      console.log('⏳ Already loading, ignoring duplicate click');
+      return;
+    }
+    
+    console.log('🔐 Login attempt:', { selectedRole, licenseId: formData.id, password: '***' });
+    setIsLoading(true);
+    
+    // Safety timeout - reset loading after 10 seconds
+    const timeout = setTimeout(() => {
+      console.error('❌ Login timeout - taking too long');
+      setIsLoading(false);
+      alert('Login taking too long. Please try again.');
+    }, 10000);
+    
     try {
-      if (selectedRole === 'patient') {
-        const result = await api.post('/auth/patient/login', { aadhaarId: formData.id, password: formData.password });
-        if (result.token) {
+      if (selectedRole === 'doctor') {
+        console.log('🏥 Logging in as doctor...');
+        try {
+          const result = await api.post('/auth/doctor/login', { licenseId: formData.id.trim(), password: formData.password.trim() });
+          console.log('✅ Doctor login result:', result);
+          console.log('   - Has token?', !!result.token);
+          console.log('   - Has user?', !!result.user);
+          console.log('   - Token:', result.token ? result.token.substring(0, 20) + '...' : 'NO TOKEN');
+          console.log('   - User:', result.user);
+          
+          if (!result.token) {
+            console.error('❌ No token in response');
+            clearTimeout(timeout);
+            alert('No token received: ' + (result.message || 'Unknown error'));
+            setIsLoading(false);
+            return;
+          }
+          
+          if (!result.user) {
+            console.error('❌ No user in response');
+            alert('No user data received');
+            setIsLoading(false);
+            return;
+          }
+          
+          console.log('💾 Setting localStorage token...');
           localStorage.setItem('emar_token', result.token);
+          console.log('✅ Token saved to localStorage');
+          
+          console.log('👤 Calling setUser...');
           setUser(result.user);
-          navigate('/patient/dashboard');
-        } else {
-          alert(result.message || 'Login failed');
+          console.log('✅ setUser called');
+          
+          console.log('📍 Navigating to /doctor/overview...');
+          clearTimeout(timeout);
+          navigate('/doctor/overview');
+          console.log('✅ Navigation called');
+        } catch (apiError) {
+          console.error('❌ API Error:', apiError);
+          clearTimeout(timeout);
+          setIsLoading(false);
+          throw apiError;
         }
         return;
       }
-      if (selectedRole === 'doctor') {
-        const result = await api.post('/auth/doctor/login', { licenseId: formData.id, password: formData.password });
+      if (selectedRole === 'patient') {
+        console.log('👤 Logging in as patient...');
+        const result = await api.post('/auth/patient/login', { aadhaarId: formData.id.trim(), password: formData.password.trim() });
+        console.log('✅ Patient login result:', result);
         if (result.token) {
           localStorage.setItem('emar_token', result.token);
           setUser(result.user);
-          navigate('/doctor/overview');
+          clearTimeout(timeout);
+          navigate('/patient/dashboard');
         } else {
+          clearTimeout(timeout);
           alert(result.message || 'Login failed');
+          setIsLoading(false);
         }
         return;
       }
     } catch (error) {
-      alert(error.message || 'Login failed');
+      console.error('❌ Login error caught:', error);
+      console.error('   Error message:', error.message);
+      console.error('   Error stack:', error.stack);
+      clearTimeout(timeout);
+      alert('Login Error: ' + (error.message || 'Unknown error'));
+      setIsLoading(false);
     }
   };
 
@@ -116,8 +175,6 @@ const Login = () => {
         flex: '0 0 45%', backgroundColor: '#F0F4F8',
         position: 'relative', overflow: 'hidden'
       }}>
-
-        {/* Logo — animates with role switch */}
         <div style={{ position: 'absolute', top: '24px', left: '24px', zIndex: 10, ...getAnimStyle() }}>
           <img
             src={displayRole === 'patient' ? '/images/logo-green.png' : '/images/logo-blue.png'}
@@ -126,7 +183,6 @@ const Login = () => {
           />
         </div>
 
-        {/* White blob */}
         <svg viewBox="0 0 500 700" preserveAspectRatio="none" style={{
           position: 'absolute', top: 0, left: 0,
           width: '100%', height: '100%', zIndex: 1
@@ -134,7 +190,6 @@ const Login = () => {
           <path d="M0,0 L320,0 Q480,100 490,350 Q480,600 320,700 L0,700 Z" fill="white" />
         </svg>
 
-        {/* Illustration — animates with role switch */}
         <div style={{
           position: 'absolute', zIndex: 2,
           bottom: '150px', left: '120px', width: '320px',
@@ -154,7 +209,7 @@ const Login = () => {
         backgroundColor: roleColors[selectedRole],
         padding: '60px',
         display: 'flex', flexDirection: 'column', justifyContent: 'center',
-        transition: 'background-color 0.4s ease'
+        transition: animState === 'idle' ? 'background-color 0.4s ease' : 'none'
       }}>
         <h1 style={{
           fontSize: '52px', fontWeight: '900',
@@ -163,7 +218,6 @@ const Login = () => {
           Login as
         </h1>
 
-        {/* Role Tabs */}
         <div style={{
           backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: '50px',
           padding: '4px', display: 'flex', marginBottom: '32px', width: 'fit-content'
@@ -187,8 +241,7 @@ const Login = () => {
           ))}
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit}>
+        <div>
           <div style={{ marginBottom: '16px' }}>
             <label style={{
               fontWeight: 'bold', color: 'white',
@@ -199,7 +252,7 @@ const Login = () => {
             <input
               type="text"
               name="username"
-              autocomplete="username"
+              autoComplete="username"
               placeholder={config.placeholder1}
               value={formData.id}
               onChange={(e) => setFormData({ ...formData, id: e.target.value })}
@@ -209,7 +262,6 @@ const Login = () => {
                 border: 'none', color: 'white', fontSize: '16px',
                 outline: 'none', boxSizing: 'border-box'
               }}
-              required
             />
           </div>
 
@@ -223,7 +275,7 @@ const Login = () => {
             <input
               type="password"
               name="password"
-              autocomplete="current-password"
+              autoComplete="current-password"
               placeholder="Enter Password"
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
@@ -233,23 +285,33 @@ const Login = () => {
                 border: 'none', color: 'white', fontSize: '16px',
                 outline: 'none', boxSizing: 'border-box'
               }}
-              required
             />
           </div>
 
-          <button
-            type="submit"
+          <div
+            role="button"
+            onClick={handleSubmit}
             style={{
-              width: '100%', height: '56px', borderRadius: '50px',
-              backgroundColor: buttonColors[selectedRole],
-              color: 'white', fontSize: '20px', fontWeight: 'bold',
-              border: 'none', cursor: 'pointer',
-              transition: 'background-color 0.4s ease'
+              width: '100%',
+              height: '56px',
+              borderRadius: '50px',
+              backgroundColor: isLoading ? '#ccc' : buttonColors[selectedRole],
+              color: isLoading ? '#666' : 'white',
+              fontSize: '20px',
+              fontWeight: 'bold',
+              cursor: isLoading ? 'not-allowed' : 'pointer',
+              userSelect: 'none',
+              WebkitTapHighlightColor: 'transparent',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'background-color 0.4s ease',
+              opacity: isLoading ? 0.6 : 1,
             }}
           >
-            Login Securely
-          </button>
-        </form>
+            {isLoading ? '⏳ Logging in...' : 'Login Securely'}
+          </div>
+        </div>
 
         <p style={{ color: 'white', textAlign: 'center', marginTop: '20px', fontSize: '14px' }}>
           Don't have an account?{' '}
