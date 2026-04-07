@@ -8,6 +8,42 @@ import { api } from '../../services/api';
 const DoctorDashboard = () => {
   const navigate = useNavigate();
   const user = getUser();
+  
+  // 🔐 Validate that the logged-in user is actually a doctor
+  if (!user || user.role !== 'doctor') {
+    return (
+      <div style={{
+        display: 'flex', justifyContent: 'center', alignItems: 'center',
+        height: '100vh', backgroundColor: '#f5f5f5'
+      }}>
+        <div style={{
+          backgroundColor: 'white', borderRadius: '12px', padding: '40px',
+          textAlign: 'center', boxShadow: '0 2px 16px rgba(0,0,0,0.1)'
+        }}>
+          <div style={{ fontSize: '48px', marginBottom: '16px' }}>❌</div>
+          <h2 style={{ margin: '0 0 8px 0', color: '#333' }}>Access Denied</h2>
+          <p style={{ color: '#666', margin: '0 0 24px 0' }}>
+            You must log in as a doctor to access this page
+          </p>
+          <button
+            onClick={() => {
+              localStorage.removeItem('emar_user');
+              localStorage.removeItem('emar_token');
+              navigate('/login');
+            }}
+            style={{
+              backgroundColor: '#1A237E', color: 'white', border: 'none',
+              borderRadius: '8px', padding: '10px 24px', fontWeight: 'bold',
+              cursor: 'pointer'
+            }}
+          >
+            Go to Login
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const [stats, setStats] = useState({ pendingRecords: 0, totalPatients: 0, accessRequests: 0 });
   const [pendingRecords, setPendingRecords] = useState([]);
   const [recentActivity, setRecentActivity] = useState([]);
@@ -176,7 +212,7 @@ const DoctorDashboard = () => {
       {[
         { icon: '📋', label: 'Pending Approvals', value: stats.pendingRecords, color: '#F39C12', path: '/doctor/pending-approvals' },
         { icon: '👥', label: 'My Patients', value: stats.totalPatients, color: '#2979FF', path: '/doctor/patient-management' },
-        { icon: '🔐', label: 'Access Requests', value: stats.accessRequests, color: '#9C27B0', path: null },
+        { icon: '🔐', label: 'Access Requests', value: stats.accessRequests, color: '#9C27B0', path: '/doctor/access-requests' },
         { icon: '💊', label: 'Add Prescription', value: 'Go →', color: '#2ECC71', path: '/doctor/add-record' },
       ].map((s, i) => (
         <div

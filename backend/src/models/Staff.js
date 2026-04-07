@@ -8,6 +8,7 @@ const staffSchema = new mongoose.Schema({
   phone: { type: String, required: true },
   password: { type: String, required: true },
   role: { type: String, default: 'staff' },
+  status: { type: String, enum: ['active', 'blocked'], default: 'active' },
   createdAt: { type: Date, default: Date.now }
 });
 

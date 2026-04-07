@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const Patient = require('../models/Patient');
 const Doctor = require('../models/Doctor');
 const Staff = require('../models/Staff');
+const Admin = require('../models/Admin');
 
 const generateToken = (id, role) => {
   return jwt.sign({ id, role }, process.env.JWT_SECRET, { expiresIn: '7d' });
@@ -92,6 +93,15 @@ const loginDoctor = async (req, res) => {
     const { licenseId, password } = req.body;
     const doctor = await Doctor.findOne({ licenseId });
     if (!doctor) return res.status(404).json({ message: 'Doctor not found' });
+    
+    // Check doctor status - only approved doctors can login
+    if (doctor.status !== 'approved') {
+      return res.status(403).json({ 
+        message: `Doctor account is ${doctor.status}. Only approved doctors can login.`,
+        status: doctor.status 
+      });
+    }
+    
     const match = await bcrypt.compare(password, doctor.password);
     if (!match) return res.status(401).json({ message: 'Invalid credentials' });
     const token = generateToken(doctor._id, 'doctor');
@@ -135,8 +145,41 @@ const loginStaff = async (req, res) => {
   }
 };
 
+const loginAdmin = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const admin = await Admin.findOne({ email });
+    if (!admin) return res.status(404).json({ message: 'Admin not found' });
+    const match = await bcrypt.compare(password, admin.password);
+    if (!match) return res.status(401).json({ message: 'Invalid credentials' });
+    const token = generateToken(admin._id, 'admin');
+    const userObj = admin.toObject();
+    delete userObj.password;
+    res.json({ token, user: userObj });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+const registerAdmin = async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+    const exists = await Admin.findOne({ email });
+    if (exists) return res.status(400).json({ message: 'Admin already exists' });
+    const hashed = await bcrypt.hash(password, 10);
+    const admin = await Admin.create({ name, email, password: hashed });
+    const token = generateToken(admin._id, 'admin');
+    const userObj = admin.toObject();
+    delete userObj.password;
+    res.status(201).json({ token, user: userObj });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 module.exports = {
   registerPatient, loginPatient,
   registerDoctor, loginDoctor,
-  registerStaff, loginStaff
+  registerStaff, loginStaff,
+  loginAdmin, registerAdmin
 };

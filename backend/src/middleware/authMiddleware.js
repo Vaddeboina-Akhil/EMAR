@@ -31,5 +31,6 @@ const roleMiddleware = (roles) => {
 const allowStaff = roleMiddleware(['staff']);
 const allowDoctor = roleMiddleware(['doctor']);
 const allowPatient = roleMiddleware(['patient']);
+const allowAdmin = roleMiddleware(['admin']);
 
-module.exports = { authMiddleware, roleMiddleware, allowStaff, allowDoctor, allowPatient };
+module.exports = { authMiddleware, roleMiddleware, allowStaff, allowDoctor, allowPatient, allowAdmin };

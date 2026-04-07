@@ -28,7 +28,17 @@ exports.getPatientStats = async (req, res) => {
       accessLogsCount = await AccessLog.countDocuments({ patientId });
     } catch (e) { accessLogsCount = 0; }
 
-    res.json({ patient, stats: { recordsCount, accessLogsCount } });
+    // Count access requests (consents sent to this patient)
+    let accessRequestsCount = 0;
+    try {
+      const Consent = require('../models/Consent');
+      accessRequestsCount = await Consent.countDocuments({ patientId });
+    } catch (e) { accessRequestsCount = 0; }
+
+    // Total = audit trail logs + access requests
+    const totalAccessCount = accessLogsCount + accessRequestsCount;
+
+    res.json({ patient, stats: { recordsCount, accessLogsCount: totalAccessCount, auditTrailCount: accessLogsCount, requestsCount: accessRequestsCount } });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

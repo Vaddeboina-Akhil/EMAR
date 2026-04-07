@@ -1,5 +1,6 @@
 const Consent = require('../models/Consent');
 const AccessLog = require('../models/AccessLog');
+const mongoose = require('mongoose');
 
 const requestAccess = async (req, res) => {
   try {
@@ -60,18 +61,20 @@ const getAccessLogs = async (req, res) => {
     // Try multiple approaches to find logs
     let logs = [];
     
-    // First, try direct lookup (if it's a string patientId like 'EMAR-P-2932')
-    logs = await AccessLog.find({ patientId: patientIdParam })
-      .sort({ timestamp: -1 });
+    // First, try direct lookup by ObjectId if valid
+    if (mongoose.Types.ObjectId.isValid(patientIdParam)) {
+      logs = await AccessLog.find({ patientId: mongoose.Types.ObjectId(patientIdParam) })
+        .sort({ timestamp: -1 });
+    }
     
-    // If no logs found, try looking up by patient and using their MongoDB _id
+    // If no logs found, try looking up patient and use their ObjectId
     if (logs.length === 0) {
       const Patient = require('../models/Patient');
       const patient = await Patient.findOne({ 
         $or: [{ _id: patientIdParam }, { patientId: patientIdParam }] 
       });
       if (patient) {
-        logs = await AccessLog.find({ patientId: patient._id.toString() })
+        logs = await AccessLog.find({ patientId: patient._id })
           .sort({ timestamp: -1 });
       }
     }
@@ -155,4 +158,84 @@ const seedTestLogs = async (req, res) => {
   }
 };
 
-module.exports = { requestAccess, getPatientConsents, respondConsent, getAccessLogs, getConsentsByDoctor, seedTestLogs };
+// ✅ VERIFICATION — Get detailed access log statistics
+const getAccessLogStats = async (req, res) => {
+  try {
+    const { patientId } = req.params;
+    
+    // Count total logs for the patient
+    const totalLogs = await AccessLog.countDocuments({ patientId });
+    
+    // Count logs by access type
+    const logsByType = await AccessLog.aggregate([
+      { $match: { patientId: mongoose.Types.ObjectId.isValid(patientId) ? mongoose.Types.ObjectId(patientId) : patientId } },
+      { $group: { _id: '$accessType', count: { $sum: 1 } } },
+      { $sort: { _id: 1 } }
+    ]);
+    
+    // Get all logs
+    const logs = await AccessLog.find({ patientId })
+      .sort({ timestamp: -1 });
+    
+    res.json({
+      patientId,
+      totalLogs,
+      logsByType: logsByType.reduce((acc, item) => {
+        acc[item._id] = item.count;
+        return acc;
+      }, {}),
+      logs
+    });
+  } catch (err) {
+    console.error('Error fetching stats:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// ✅ MIGRATION — Create missing AccessLog entries for already-approved consents
+const migrateAccessLogs = async (req, res) => {
+  try {
+    // Find all approved consents
+    const approvedConsents = await Consent.find({ status: { $in: ['approved', 'denied'] } });
+    
+    let createdCount = 0;
+    let skippedCount = 0;
+
+    for (const consent of approvedConsents) {
+      // Check if AccessLog entry already exists
+      const existingLog = await AccessLog.findOne({
+        patientId: consent.patientId,
+        doctorName: consent.doctorName,
+        accessType: consent.status,
+        timestamp: { $gte: consent.responseDate ? new Date(consent.responseDate.getTime() - 1000) : new Date(0) }
+      });
+
+      if (!existingLog) {
+        // Create missing AccessLog entry
+        await AccessLog.create({
+          patientId: consent.patientId,
+          doctorName: consent.doctorName,
+          hospitalName: consent.hospitalName,
+          reason: consent.reason,
+          accessType: consent.status, // 'approved' or 'denied'
+          timestamp: consent.responseDate || new Date()
+        });
+        createdCount++;
+      } else {
+        skippedCount++;
+      }
+    }
+
+    res.json({
+      message: `✅ Migration completed: Created ${createdCount} new logs, Skipped ${skippedCount} existing logs`,
+      totalConsents: approvedConsents.length,
+      createdLogs: createdCount,
+      skippedLogs: skippedCount
+    });
+  } catch (err) {
+    console.error('Migration error:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+module.exports = { requestAccess, getPatientConsents, respondConsent, getAccessLogs, getConsentsByDoctor, seedTestLogs, migrateAccessLogs, getAccessLogStats };

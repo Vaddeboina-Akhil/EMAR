@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const accessLogSchema = new mongoose.Schema({
-  patientId: { type: String, required: true },
+  patientId: { type: mongoose.Schema.Types.ObjectId, ref: 'Patient', required: true },
   doctorName: { type: String },
   hospitalName: { type: String },
   accessType: { type: String },
