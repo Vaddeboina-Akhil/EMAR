@@ -40,7 +40,7 @@ router.get('/doctor/:doctorId', authMiddleware, allowDoctor, getRecordsByDoctor)
 
 // 👤 PATIENT APIs (protected) - More specific routes BEFORE generic routes
 router.get('/download/:recordId', downloadRecord); // Temporarily without auth to test
-router.get('/:patientId', authMiddleware, allowPatient, getPatientRecords);
+router.get('/:patientId', authMiddleware, getPatientRecords); // Allow both patient and doctor with consent
 
 // Upload endpoints
 router.post('/upload', upload.single('pdfFile'), uploadRecord); // Staff uploads (requires approval)

@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DoctorLayout from '../../components/layout/DoctorLayout';
 import { getUser } from '../../utils/auth';
-import { recordService } from '../../services/recordService';
+import { api } from '../../services/api';
 
 const DoctorPatientProfiles = () => {
   const navigate = useNavigate();
   const doctor = getUser();
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     if (doctor?._id) {
@@ -19,30 +20,67 @@ const DoctorPatientProfiles = () => {
   const fetchPatients = async () => {
     try {
       setLoading(true);
-      const records = await recordService.getDoctorRecords(doctor._id);
-      const recordArray = Array.isArray(records) ? records : [];
+      setError(null);
+      
+      console.log('Fetching patients for doctor:', doctor._id);
+      
+      // Get approved access requests (consents) sent by this doctor
+      let consentedPatients = [];
+      try {
+        const consentRes = await api.get(`/consent/doctor/${doctor._id}`);
+        console.log('Consent response:', consentRes);
+        
+        const consents = Array.isArray(consentRes) ? consentRes : [];
+        console.log('Filtered consents:', consents);
+        
+        // Fetch full patient details and their records for each approved consent
+        consentedPatients = await Promise.all(
+          consents
+            .filter(c => c.status === 'approved')
+            .map(async (c) => {
+              const patientId = c.patientId?._id || c.patientId;
+              const patientName = c.patientId?.name || c.patientName || 'Unknown Patient';
+              const patientEmarId = c.patientId?.patientId || '—';
+              
+              console.log('Processing patient:', patientName, 'MongoDB ID:', patientId);
+              
+              // Get all approved records for this patient
+              let recordCount = 0;
+              try {
+                console.log(`Fetching records for patient ${patientName} with ID: ${patientId}`);
+                const recordsRes = await api.get(`/records/${patientId}`);
+                console.log(`Response received for ${patientName}:`, recordsRes);
+                
+                const records = Array.isArray(recordsRes) ? recordsRes : [];
+                recordCount = records.length;
+                console.log(`✅ Records for ${patientName}: ${recordCount}`);
+              } catch (err) {
+                console.error(`❌ Failed to fetch records for patient ${patientName} (ID: ${patientId}):`, err);
+                console.error('Error details:', err.message, err.response?.status);
+                // Still return the patient even if records fetch fails
+              }
+              
+              return {
+                _id: patientId,
+                patientId: patientEmarId, // EMAR-P-XXXX
+                name: patientName,
+                recordCount,
+                hasApprovedConsent: true,
+                consentedAt: c.responseDate
+              };
+            })
+        );
+        
+        console.log('Final consented patients:', consentedPatients);
+      } catch (err) {
+        console.error('Failed to fetch approved consents:', err);
+        setError(err.message || 'Failed to fetch consent data');
+      }
 
-      // Extract unique patients from records
-      const patientMap = new Map();
-      recordArray.forEach(record => {
-        const patientId = record.patientId?._id || record.patientId;
-        if (patientId && !patientMap.has(String(patientId))) {
-          patientMap.set(String(patientId), {
-            _id: patientId,
-            name: record.patientName || 'Unknown Patient',
-            recordCount: 1,
-            lastRecord: record.createdAt
-          });
-        } else if (patientId) {
-          const patient = patientMap.get(String(patientId));
-          patient.recordCount++;
-          patient.lastRecord = record.createdAt;
-        }
-      });
-
-      setPatients(Array.from(patientMap.values()));
+      setPatients(consentedPatients);
     } catch (err) {
       console.error('Failed to fetch patients:', err);
+      setError(err.message || 'Failed to fetch patients');
     } finally {
       setLoading(false);
     }
@@ -68,7 +106,7 @@ const DoctorPatientProfiles = () => {
             👥 My Patients
           </div>
           <div style={{ fontSize: '14px', opacity: 0.85 }}>
-            Patients you've added prescriptions for
+            Patients you've added prescriptions for or have approved your access requests
           </div>
         </div>
 
@@ -85,7 +123,41 @@ const DoctorPatientProfiles = () => {
           </div>
         )}
 
-        {!loading && patients.length === 0 && (
+        {error && (
+          <div style={{
+            backgroundColor: '#FFEBEE',
+            borderRadius: '16px',
+            padding: '24px',
+            textAlign: 'center',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+            border: '1px solid #EF5350',
+            marginBottom: '20px'
+          }}>
+            <div style={{ fontSize: '28px', marginBottom: '12px' }}>❌</div>
+            <div style={{ color: '#C62828', fontWeight: 'bold', marginBottom: '8px' }}>
+              Error Loading Patients
+            </div>
+            <div style={{ color: '#D32F2F', marginBottom: '16px' }}>
+              {error}
+            </div>
+            <button
+              onClick={() => fetchPatients()}
+              style={{
+                backgroundColor: '#1A237E',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '10px 20px',
+                fontWeight: 'bold',
+                cursor: 'pointer'
+              }}
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
+        {!loading && !error && patients.length === 0 && (
           <div style={{
             backgroundColor: 'white',
             borderRadius: '16px',
@@ -98,7 +170,7 @@ const DoctorPatientProfiles = () => {
               No patients yet
             </div>
             <div style={{ color: '#666', marginBottom: '20px' }}>
-              Start by adding a prescription to build your patient list
+              Request access to patients or add a prescription to build your patient list
             </div>
             <button
               onClick={() => navigate('/doctor/add-record')}
@@ -117,7 +189,7 @@ const DoctorPatientProfiles = () => {
           </div>
         )}
 
-        {!loading && patients.length > 0 && (
+        {!loading && !error && patients.length > 0 && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
             {patients.map(patient => (
               <div
@@ -163,7 +235,7 @@ const DoctorPatientProfiles = () => {
                       {patient.name}
                     </div>
                     <div style={{ fontSize: '12px', color: '#999' }}>
-                      ID: {patient._id.toString().slice(-8)}
+                      ID: {patient.patientId}
                     </div>
                   </div>
                 </div>
