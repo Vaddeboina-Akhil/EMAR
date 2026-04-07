@@ -48,24 +48,41 @@ const Prescriptions = () => {
 
   useEffect(() => {
     fetchPrescriptions();
-  }, [patient]);
+  }, [patient?._id]);
 
   const fetchPrescriptions = async () => {
     try {
       setLoading(true);
+      setError(null);
+      
+      const patientId = patient?._id || patient?.id;
+      if (!patientId) {
+        console.warn('No patient ID available');
+        setPrescriptions([]);
+        setLoading(false);
+        return;
+      }
+      
+      console.log('Fetching records for patient:', patientId);
+      
       // Get all approved records for this patient
-      const response = await api.get(`/records/${patient._id}`);
+      const response = await api.get(`/records/${patientId}`);
+      console.log('Records response:', response);
+      
       const allRecords = Array.isArray(response) ? response : response.records || [];
+      console.log('All records:', allRecords);
       
       // Filter: Only approved records AND records created by doctors
       const doctorPrescriptions = allRecords.filter(record => 
         record.status === 'approved' && record.uploaderRole === 'doctor'
       );
       
+      console.log('Doctor prescriptions:', doctorPrescriptions);
       setPrescriptions(doctorPrescriptions);
     } catch (err) {
       console.error('Failed to fetch prescriptions:', err);
-      setError(err.message);
+      setError(err.message || 'Failed to load prescriptions');
+      setPrescriptions([]);
     } finally {
       setLoading(false);
     }
@@ -73,7 +90,7 @@ const Prescriptions = () => {
 
   if (loading) {
     return (
-      <PatientLayout>
+      <PatientLayout activePage="Prescription">
         <div style={{ padding: '40px', textAlign: 'center', color: '#999' }}>
           ⏳ Loading prescriptions...
         </div>
@@ -83,7 +100,7 @@ const Prescriptions = () => {
 
   if (error) {
     return (
-      <PatientLayout>
+      <PatientLayout activePage="Prescription">
         <div style={{ padding: '40px', textAlign: 'center', color: '#DC143C' }}>
           ❌ Error: {error}
         </div>
@@ -92,7 +109,7 @@ const Prescriptions = () => {
   }
 
   return (
-    <PatientLayout>
+    <PatientLayout activePage="Prescription">
       <div style={{
         padding: '32px',
         maxWidth: '1000px',
