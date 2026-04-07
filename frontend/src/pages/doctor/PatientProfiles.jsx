@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DoctorLayout from '../../components/layout/DoctorLayout';
 import { getUser } from '../../utils/auth';
-import { recordService } from '../../services/recordService';
+import { api } from '../../services/api';
 
 const DoctorPatientProfiles = () => {
   const navigate = useNavigate();
   const doctor = getUser();
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     if (doctor?._id) {
@@ -19,30 +20,58 @@ const DoctorPatientProfiles = () => {
   const fetchPatients = async () => {
     try {
       setLoading(true);
-      const records = await recordService.getDoctorRecords(doctor._id);
-      const recordArray = Array.isArray(records) ? records : [];
-
-      // Extract unique patients from records
-      const patientMap = new Map();
-      recordArray.forEach(record => {
-        const patientId = record.patientId?._id || record.patientId;
-        if (patientId && !patientMap.has(String(patientId))) {
-          patientMap.set(String(patientId), {
+      setError(null);
+      
+      console.log('Fetching my approved patients...');
+      
+      // Get approved patients using new endpoint
+      const approvedPatientsRes = await api.get(`/doctors/my-patients`);
+      console.log('Approved patients response:', approvedPatientsRes);
+      
+      const approvedConsents = Array.isArray(approvedPatientsRes) ? approvedPatientsRes : [];
+      console.log('Processing', approvedConsents.length, 'approved consents');
+      
+      // Fetch patient details and records for each approved consent
+      const consentedPatients = await Promise.all(
+        approvedConsents.map(async (consent) => {
+          const patientId = consent.patientId?._id || consent.patientId;
+          const patientName = consent.patientId?.name || 'Unknown Patient';
+          const patientEmarId = consent.patientId?.patientId || '—';
+          
+          console.log('Processing patient:', patientName, 'MongoDB ID:', patientId);
+          
+          // Get all records for this patient
+          let recordCount = 0;
+          try {
+            console.log(`Fetching records for patient ${patientName} with ID: ${patientId}`);
+            const recordsRes = await api.get(`/records/${patientId}`);
+            console.log(`Response received for ${patientName}:`, recordsRes);
+            
+            const records = Array.isArray(recordsRes) ? recordsRes : [];
+            recordCount = records.length;
+            console.log(`✅ Records for ${patientName}: ${recordCount}`);
+          } catch (err) {
+            console.error(`❌ Failed to fetch records for patient ${patientName} (ID: ${patientId}):`, err);
+            console.error('Error details:', err.message, err.response?.status);
+            // Still return the patient even if records fetch fails
+          }
+          
+          return {
             _id: patientId,
-            name: record.patientName || 'Unknown Patient',
-            recordCount: 1,
-            lastRecord: record.createdAt
-          });
-        } else if (patientId) {
-          const patient = patientMap.get(String(patientId));
-          patient.recordCount++;
-          patient.lastRecord = record.createdAt;
-        }
-      });
-
-      setPatients(Array.from(patientMap.values()));
+            patientId: patientEmarId, // EMAR-P-XXXX
+            name: patientName,
+            recordCount,
+            hasApprovedConsent: true,
+            consentedAt: consent.responseDate
+          };
+        })
+      );
+      
+      console.log('Final consented patients:', consentedPatients);
+      setPatients(consentedPatients);
     } catch (err) {
       console.error('Failed to fetch patients:', err);
+      setError(err.message || 'Failed to fetch patients');
     } finally {
       setLoading(false);
     }
@@ -68,7 +97,7 @@ const DoctorPatientProfiles = () => {
             👥 My Patients
           </div>
           <div style={{ fontSize: '14px', opacity: 0.85 }}>
-            Patients you've added prescriptions for
+            Patients you've added prescriptions for or have approved your access requests
           </div>
         </div>
 
@@ -85,7 +114,41 @@ const DoctorPatientProfiles = () => {
           </div>
         )}
 
-        {!loading && patients.length === 0 && (
+        {error && (
+          <div style={{
+            backgroundColor: '#FFEBEE',
+            borderRadius: '16px',
+            padding: '24px',
+            textAlign: 'center',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+            border: '1px solid #EF5350',
+            marginBottom: '20px'
+          }}>
+            <div style={{ fontSize: '28px', marginBottom: '12px' }}>❌</div>
+            <div style={{ color: '#C62828', fontWeight: 'bold', marginBottom: '8px' }}>
+              Error Loading Patients
+            </div>
+            <div style={{ color: '#D32F2F', marginBottom: '16px' }}>
+              {error}
+            </div>
+            <button
+              onClick={() => fetchPatients()}
+              style={{
+                backgroundColor: '#1A237E',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '10px 20px',
+                fontWeight: 'bold',
+                cursor: 'pointer'
+              }}
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
+        {!loading && !error && patients.length === 0 && (
           <div style={{
             backgroundColor: 'white',
             borderRadius: '16px',
@@ -98,7 +161,7 @@ const DoctorPatientProfiles = () => {
               No patients yet
             </div>
             <div style={{ color: '#666', marginBottom: '20px' }}>
-              Start by adding a prescription to build your patient list
+              Request access to patients or add a prescription to build your patient list
             </div>
             <button
               onClick={() => navigate('/doctor/add-record')}
@@ -117,7 +180,7 @@ const DoctorPatientProfiles = () => {
           </div>
         )}
 
-        {!loading && patients.length > 0 && (
+        {!loading && !error && patients.length > 0 && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
             {patients.map(patient => (
               <div
@@ -141,7 +204,7 @@ const DoctorPatientProfiles = () => {
                   e.currentTarget.style.transform = 'none';
                   e.currentTarget.style.borderColor = 'transparent';
                 }}
-                onClick={() => navigate(`/doctor/patient/${patient._id}`)}
+                onClick={() => navigate(`/doctor/my-patient/${patient._id}`)}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
                   <div style={{
@@ -163,7 +226,7 @@ const DoctorPatientProfiles = () => {
                       {patient.name}
                     </div>
                     <div style={{ fontSize: '12px', color: '#999' }}>
-                      ID: {patient._id.toString().slice(-8)}
+                      ID: {patient.patientId}
                     </div>
                   </div>
                 </div>

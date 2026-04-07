@@ -204,12 +204,73 @@ const createPrescription = async (req, res) => {
 // 👤 PATIENT: Only see APPROVED records
 const getPatientRecords = async (req, res) => {
   try {
+    const { patientId } = req.params;
+    const user = req.user; // From authMiddleware
+    const mongoose = require('mongoose');
+
+    console.log('\n🔍 getPatientRecords - Detailed Debugging:');
+    console.log('User:', { role: user?.role, _id: user?._id, name: user?.name });
+    console.log('PatientId from URL:', patientId);
+
+    // Convert patientId string to ObjectId for database queries
+    let patientObjectId;
+    try {
+      patientObjectId = new mongoose.Types.ObjectId(patientId);
+      console.log('✅ Converted to ObjectId:', patientObjectId);
+    } catch (e) {
+      console.log('❌ Failed to convert patientId to ObjectId:', e.message);
+      return res.status(400).json({ message: 'Invalid patient ID format' });
+    }
+
+    // Authorization check: Patient can only see their own records
+    if (user.role === 'patient') {
+      console.log('👤 Patient role check...');
+      if (user._id.toString() !== patientId) {
+        console.log('❌ Patient trying to access different patient records');
+        return res.status(403).json({ message: 'You can only view your own records' });
+      }
+      console.log('✅ Patient authorized for own records');
+    }
+    // Authorization check: Doctor needs approved consent for this patient
+    else if (user.role === 'doctor') {
+      console.log('👨‍⚕️ Doctor role check...');
+      console.log('Looking for consent with:');
+      console.log('  doctorId:', user._id.toString());
+      console.log('  patientId:', patientObjectId.toString());
+      console.log('  status: approved');
+
+      const Consent = require('../models/Consent');
+      const hasApprovedConsent = await Consent.findOne({
+        doctorId: user._id,
+        patientId: patientObjectId,
+        status: 'approved'
+      }).lean();
+      
+      console.log('Consent found:', hasApprovedConsent ? 'YES' : 'NO');
+      if (hasApprovedConsent) {
+        console.log('✅ Doctor authorized via consent');
+      } else {
+        console.log('❌ No approved consent found');
+        return res.status(403).json({ message: 'You do not have approved access to this patient\'s records' });
+      }
+    }
+    // Any other role is not allowed
+    else {
+      console.log('❌ Unauthorized role:', user?.role);
+      return res.status(403).json({ message: 'Unauthorized to view patient records' });
+    }
+
+    console.log('Fetching records for patient:', patientObjectId);
     const records = await MedicalRecord.find({
-      patientId: req.params.patientId,
-      status: 'approved'  // Only approved records
+      patientId: patientObjectId,
+      status: { $ne: 'rejected' }  // Match patient dashboard: all non-rejected records
     }).sort({ createdAt: -1 });
+    
+    console.log('Found records:', records.length);
+    console.log('✅ Returning', records.length, 'records');
     res.json(records);
   } catch (err) {
+    console.error('❌ Error in getPatientRecords:', err.message);
     res.status(500).json({ message: err.message });
   }
 };
