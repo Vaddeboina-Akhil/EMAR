@@ -1,6 +1,7 @@
 const MedicalRecord = require('../models/MedicalRecord');
 const Doctor = require('../models/Doctor');
 const AccessLog = require('../models/AccessLog');
+const AuditLog = require('../models/AuditLog');
 
 // 📋 STAFF: Create record in DRAFT status
 const createDraftRecord = async (req, res) => {
@@ -131,6 +132,29 @@ const uploadRecord = async (req, res) => {
       recordsAccessed: recordType,
       timestamp: new Date()
     });
+
+    // 📝 Save audit log for patient
+    let docId = null;
+    if (doctorObjectId) {
+      docId = doctorObjectId;
+    } else if (doctorId) {
+      const Doctor = require('../models/Doctor');
+      const doc = await Doctor.findById(doctorId);
+      if (doc) docId = doc._id;
+    }
+    
+    if (docId) {
+      await AuditLog.create({
+        patientId,
+        actor_entity: 'Patient Record System',
+        action_type: 'record_uploaded',
+        affected_resource: `medical_record_${recordType}`,
+        metadata: {
+          reason: `Medical record uploaded: ${recordType}`,
+          recordType: recordType
+        }
+      });
+    }
 
     res.status(201).json({
       message: '✅ Record submitted for approval',
