@@ -285,3 +285,101 @@ exports.getMyPatientDetails = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// 📋 Get all access requests (consents) sent by this doctor
+exports.getAccessRequests = async (req, res) => {
+  try {
+    const doctorId = req.user._id || req.user.id;
+
+    const requests = await Consent.find({
+      doctorId: doctorId
+    })
+      .populate('patientId', 'name patientId email')
+      .sort({ createdAt: -1 });
+
+    res.json({ requests, total: requests.length });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ⏳ Get pending records for this doctor (awaiting approval)
+exports.getPendingRecords = async (req, res) => {
+  try {
+    const doctorId = req.user._id || req.user.id;
+
+    // Get doctor info to filter by hospital
+    const doctor = await Doctor.findById(doctorId);
+    if (!doctor) {
+      return res.status(404).json({ message: 'Doctor not found' });
+    }
+
+    const pendingRecords = await MedicalRecord.find({
+      hospitalName: doctor.hospitalName,
+      status: 'pending'
+    })
+      .populate('doctorObjectId', 'name')
+      .sort({ createdAt: -1 });
+
+    res.json({ records: pendingRecords, total: pendingRecords.length });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// 📊 Get recent activity for this doctor
+exports.getRecentActivity = async (req, res) => {
+  try {
+    const doctorId = req.user._id || req.user.id;
+    const AccessLog = require('../models/AccessLog');
+
+    // Get recent access logs for this doctor (limit 5)
+    const recentLogs = await AccessLog.find({
+      doctorId: doctorId
+    })
+      .populate('patientId', 'name patientId')
+      .sort({ timestamp: -1 })
+      .limit(5);
+
+    // Map logs to activity format
+    const activities = recentLogs.map(log => {
+      const patientName = log.patientId?.name || 'Unknown Patient';
+      let action = 'Unknown action';
+
+      if (log.accessType === 'ACCESS_APPROVED') {
+        action = `Access granted by ${patientName}`;
+      } else if (log.accessType === 'ACCESS_REQUESTED') {
+        action = `You requested access for ${patientName}`;
+      } else if (log.accessType === 'RECORD_APPROVED') {
+        action = `Record approved for ${patientName}`;
+      } else if (log.accessType === 'RECORD_UPLOADED') {
+        action = `Record uploaded by ${patientName}`;
+      }
+
+      return {
+        id: log._id,
+        action,
+        actionType: log.accessType,
+        patientName,
+        patientId: log.patientId?._id,
+        timestamp: log.timestamp,
+        icon: getActivityIcon(log.accessType)
+      };
+    });
+
+    res.json({ activities });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Helper function to get activity icon
+const getActivityIcon = (actionType) => {
+  const iconMap = {
+    'ACCESS_APPROVED': '✅',
+    'ACCESS_REQUESTED': '📋',
+    'RECORD_APPROVED': '📄',
+    'RECORD_UPLOADED': '📤'
+  };
+  return iconMap[actionType] || '📝';
+};
