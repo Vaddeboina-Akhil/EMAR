@@ -478,7 +478,7 @@ const StaffPatientView = () => {
                         filteredDoctors.map((doctor, idx) => (
                           <div
                             key={doctor._id}
-                            onClick={() => handleDoctorSelect(doctor)}
+                            onMouseDown={() => handleDoctorSelect(doctor)}
                             style={{
                               padding: '10px 12px',
                               backgroundColor: idx % 2 === 0 ? 'white' : '#F9F9F9',
