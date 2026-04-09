@@ -321,7 +321,7 @@ const DoctorDashboard = () => {
 
   // ─── Quick Actions Grid ────────────────────────────────────────────────────
   const QuickActions = () => (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '24px' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: isMobile ? '12px' : '16px', marginBottom: '24px' }}>
       {[
         { icon: '🔍', label: 'Search Patient', sub: 'By EMAR ID, Name, Aadhaar', path: '/doctor/search', color: '#2979FF' },
         { icon: '📋', label: 'Approve Records', sub: 'Review staff-uploaded records', path: '/doctor/pending-approvals', color: '#F39C12' },
@@ -331,14 +331,14 @@ const DoctorDashboard = () => {
         <div
           key={a.path}
           onClick={() => navigate(a.path)}
-          style={{ backgroundColor: 'white', borderRadius: '16px', padding: '20px', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: '16px', border: `1.5px solid ${a.color}22`, transition: 'all 0.15s' }}
+          style={{ backgroundColor: 'white', borderRadius: isMobile ? '12px' : '16px', padding: isMobile ? '16px' : '20px', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: isMobile ? '12px' : '16px', border: `1.5px solid ${a.color}22`, transition: 'all 0.15s', minHeight: '80px' }}
           onMouseEnter={e => { e.currentTarget.style.backgroundColor = `${a.color}0d`; e.currentTarget.style.transform = 'translateY(-2px)'; }}
           onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'white'; e.currentTarget.style.transform = 'none'; }}
         >
-          <div style={{ width: '50px', height: '50px', borderRadius: '14px', backgroundColor: `${a.color}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', flexShrink: 0 }}>{a.icon}</div>
+          <div style={{ width: isMobile ? '40px' : '50px', height: isMobile ? '40px' : '50px', borderRadius: '14px', backgroundColor: `${a.color}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: isMobile ? '20px' : '24px', flexShrink: 0 }}>{a.icon}</div>
           <div>
-            <div style={{ fontWeight: 'bold', color: '#111', fontSize: '15px', marginBottom: '3px' }}>{a.label}</div>
-            <div style={{ fontSize: '12px', color: '#888' }}>{a.sub}</div>
+            <div style={{ fontWeight: 'bold', color: '#111', fontSize: isMobile ? '13px' : '15px', marginBottom: '3px' }}>{a.label}</div>
+            <div style={{ fontSize: isMobile ? '11px' : '12px', color: '#888' }}>{a.sub}</div>
           </div>
         </div>
       ))}
