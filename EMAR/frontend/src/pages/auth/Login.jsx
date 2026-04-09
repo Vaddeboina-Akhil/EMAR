@@ -163,7 +163,7 @@ const Login = () => {
       height: '100vh', 
       display: 'flex', 
       flexDirection: isMobile ? 'column' : 'row',
-      overflow: 'hidden',
+      overflow: isMobile ? 'auto' : 'hidden',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
     }}>
       <style>{`
@@ -185,7 +185,32 @@ const Login = () => {
         }
       `}</style>
 
-      {/* LEFT HALF - Hidden on mobile */}
+      {/* Mobile Header - Logo & Illustration at top */}
+      {isMobile && (
+        <div style={{
+          backgroundColor: '#F0F4F8',
+          padding: '20px',
+          textAlign: 'center',
+          borderBottom: '2px solid #E0E0E0'
+        }}>
+          <div style={{ marginBottom: '16px', ...getAnimStyle() }}>
+            <img
+              src={displayRole === 'patient' ? '/images/logo-green.png' : '/images/logo-blue.png'}
+              alt="EMAR"
+              style={{ height: '20px', objectFit: 'contain' }}
+            />
+          </div>
+          <div style={{ width: '140px', margin: '0 auto', ...getAnimStyle() }}>
+            <img
+              src={displayRole === 'patient' ? '/images/patient-illustration.png' : '/images/doctor-illustration.png'}
+              alt="illustration"
+              style={{ width: '100%', objectFit: 'contain', maxHeight: '120px' }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* LEFT HALF - Desktop only */}
       <div style={{
         display: isMobile ? 'none' : 'flex',
         flex: '0 0 45%', 
@@ -229,9 +254,10 @@ const Login = () => {
         display: 'flex', 
         flexDirection: 'column', 
         justifyContent: isMobile ? 'flex-start' : 'center',
-        paddingTop: isMobile ? '60px' : '60px',
+        paddingTop: isMobile ? '40px' : '60px',
         transition: animState === 'idle' ? 'background-color 0.4s ease' : 'none',
-        overflow: 'auto'
+        overflow: isMobile ? 'visible' : 'auto',
+        minHeight: isMobile ? 'auto' : '100vh'
       }}>
         <h1 style={{
           fontSize: isMobile ? '32px' : '52px', 
@@ -367,6 +393,7 @@ const Login = () => {
           color: 'white', 
           textAlign: 'center', 
           marginTop: isMobile ? '16px' : '20px', 
+          marginBottom: isMobile ? '30px' : '20px',
           fontSize: isMobile ? '12px' : '14px' 
         }}>
           Don't have an account?{' '}
