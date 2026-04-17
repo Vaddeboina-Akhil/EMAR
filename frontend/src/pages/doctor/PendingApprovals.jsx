@@ -28,7 +28,7 @@ const PendingApprovals = () => {
       return;
     }
     fetchPendingRecords();
-  }, [doctor, navigate]);
+  }, [doctor._id, navigate]);
 
   const fetchPendingRecords = async () => {
     try {

@@ -116,10 +116,18 @@ exports.getPendingApprovals = async (req, res) => {
     const doctor = await getDoctor(req.user.id);
     if (!doctor) return res.status(404).json({ message: 'Doctor not found' });
 
+    console.log('Debug getPendingApprovals:');
+    console.log('  Doctor ID:', req.user.id);
+    console.log('  Doctor Name:', doctor.name);
+    console.log('  Doctor Hospital:', doctor.hospitalName);
+    console.log('  Query searching for hospital:', doctor.hospitalName, 'and status: pending');
+
     const pendingRecords = await MedicalRecord.find({
       hospitalName: doctor.hospitalName,
       status: 'pending'
     }).sort({ createdAt: -1 });
+
+    console.log('  Found records:', pendingRecords.length);
 
     res.json(pendingRecords);
   } catch (error) {
