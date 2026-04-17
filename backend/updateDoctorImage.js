@@ -10,7 +10,7 @@ async function updateDoctorProfileImage() {
     console.log('✅ MongoDB Connected');
 
     // Read the doctor profile image
-    const imagePath = 'C:\\Users\\akhil\\Downloads\\EMAR\\EMAR\\frontend\\public\\images\\Abhiram.jpg';
+    const imagePath = 'C:\\Users\\akhil\\Downloads\\EMAR\\frontend\\public\\images\\doctor-profile.jpg';
     
     if (!fs.existsSync(imagePath)) {
       console.error('❌ Image file not found:', imagePath);
@@ -28,7 +28,7 @@ async function updateDoctorProfileImage() {
 
     // Update doctor record
     const doctor = await Doctor.findOneAndUpdate(
-      { licenseId: 'MED1235' },
+      { licenseId: 'MED1236' },
       { profileImage: dataUrl },
       { new: true }
     );

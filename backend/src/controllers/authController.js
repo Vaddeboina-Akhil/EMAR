@@ -69,7 +69,7 @@ const loginPatient = async (req, res) => {
 
 const registerDoctor = async (req, res) => {
   try {
-    const { name, dob, licenseId, specialization, hospitalName, email, phone, password } = req.body;
+    const { name, dob, licenseId, specialization, hospitalName, email, phone, password, profileImage } = req.body;
     const exists = await Doctor.findOne({ $or: [{ email }, { licenseId }] });
     if (exists) return res.status(400).json({ message: 'Doctor already exists' });
     const hashed = await bcrypt.hash(password, 10);
@@ -77,7 +77,8 @@ const registerDoctor = async (req, res) => {
     const doctorId = generateDoctorId();
     const doctor = await Doctor.create({
       name, dob, age, licenseId, specialization,
-      hospitalName, email, phone, password: hashed, doctorId
+      hospitalName, email, phone, password: hashed, doctorId,
+      profileImage: profileImage || null
     });
     const token = generateToken(doctor._id, 'doctor');
     const userObj = doctor.toObject();

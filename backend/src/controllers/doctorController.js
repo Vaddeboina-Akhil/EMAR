@@ -199,7 +199,7 @@ exports.getAllDoctors = async (req, res) => {
   try {
     const { hospital } = req.query;
     
-    let query = { verified: true };
+    let query = {status: 'approved' };
     
     // Filter by hospital if provided
     if (hospital) {
